@@ -19,6 +19,12 @@ The application combines a React interface with a Python API to model the kinds 
 - Deterministic AI-style services for prompt review and document triage.
 - Docker Compose for running the full stack.
 
+## Requirements
+
+- Python 3.11 or newer.
+- Node.js 20 or newer.
+- Docker, when running the full stack with Compose.
+
 ## Run With Docker
 
 ```bash
