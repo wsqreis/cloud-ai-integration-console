@@ -4,7 +4,9 @@ from app.services import analyze_document, evaluate_prompt, plan_assistant_reply
 def test_prompt_evaluation_rewards_specific_context() -> None:
     result = evaluate_prompt(
         "Goal: reduce manual supplier review. Use Oracle Fusion and a REST API. "
-        "Return JSON with risks, assumptions, validation steps, and confidence."
+        "Return JSON with risks, assumptions, validation steps, and confidence. "
+        "The workflow should support finance users, avoid production access, flag missing "
+        "supplier fields, and explain any fallback action for incomplete AI output."
     )
 
     assert result.score >= 80
@@ -35,4 +37,3 @@ def test_assistant_confidence_uses_context_and_systems() -> None:
     assert "Supplier Onboarding" in result.answer
     assert result.confidence == "high"
     assert len(result.suggested_steps) >= 5
-
