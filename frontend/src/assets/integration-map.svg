@@ -1,0 +1,26 @@
+<svg width="760" height="420" viewBox="0 0 760 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Integration architecture map</title>
+  <desc id="desc">A cloud integration flow connecting enterprise applications, APIs, AI services, and an operations console.</desc>
+  <rect width="760" height="420" rx="0" fill="#F7F9F7"/>
+  <path d="M107 210H267" stroke="#8AA398" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 12"/>
+  <path d="M493 210H653" stroke="#8AA398" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 12"/>
+  <path d="M380 122V66" stroke="#8AA398" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 12"/>
+  <path d="M380 354V298" stroke="#8AA398" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 12"/>
+  <rect x="54" y="153" width="120" height="114" rx="14" fill="#FFFFFF" stroke="#BCCBC6" stroke-width="2"/>
+  <rect x="586" y="153" width="120" height="114" rx="14" fill="#FFFFFF" stroke="#BCCBC6" stroke-width="2"/>
+  <rect x="282" y="124" width="196" height="172" rx="22" fill="#12312B"/>
+  <rect x="304" y="146" width="152" height="32" rx="8" fill="#D8EFE6"/>
+  <rect x="304" y="194" width="152" height="18" rx="6" fill="#84C7A9"/>
+  <rect x="304" y="226" width="112" height="18" rx="6" fill="#F0C05A"/>
+  <rect x="304" y="258" width="132" height="18" rx="6" fill="#E8896D"/>
+  <rect x="294" y="24" width="172" height="70" rx="14" fill="#FFFFFF" stroke="#BCCBC6" stroke-width="2"/>
+  <rect x="294" y="326" width="172" height="70" rx="14" fill="#FFFFFF" stroke="#BCCBC6" stroke-width="2"/>
+  <circle cx="114" cy="189" r="18" fill="#84C7A9"/>
+  <circle cx="114" cy="231" r="18" fill="#F0C05A"/>
+  <circle cx="646" cy="210" r="30" fill="#E8896D"/>
+  <rect x="326" y="48" width="108" height="12" rx="6" fill="#537C72"/>
+  <rect x="326" y="68" width="82" height="10" rx="5" fill="#9DB8AE"/>
+  <rect x="326" y="350" width="108" height="12" rx="6" fill="#537C72"/>
+  <rect x="326" y="370" width="82" height="10" rx="5" fill="#9DB8AE"/>
+</svg>
+
