@@ -12,3 +12,56 @@ The application combines a React interface with a Python API to model the kinds 
 - Inspect prototype automation flows before implementation.
 - Run the stack locally with Docker or with the frontend and backend development servers.
 
+## Tech Stack
+
+- React, TypeScript, and Vite for the responsive client.
+- Python and FastAPI for the REST API.
+- Deterministic AI-style services for prompt review and document triage.
+- Docker Compose for running the full stack.
+
+## Run With Docker
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:8080`.
+
+## Run For Development
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+## Test
+
+```bash
+cd backend
+pytest
+```
+
+```bash
+cd frontend
+npm run build
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
