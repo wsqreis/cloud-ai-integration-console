@@ -94,3 +94,4 @@ npm run build
 - [API Reference](docs/API.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Primary Use Case](docs/USE_CASE.md)
+- [MVP Scope](docs/MVP_SCOPE.md)
