@@ -29,6 +29,7 @@ def observability_middleware_factory(app):
         request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
         started_at = time.perf_counter()
         app.state.metrics["requests_total"] += 1
+        request.state.request_id = request_id
 
         try:
             response = await call_next(request)
@@ -67,4 +68,3 @@ def observability_middleware_factory(app):
         return response
 
     return middleware
-

@@ -1,9 +1,34 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def _get_float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        return float(raw_value)
+    except ValueError:
+        return default
+
+
+def _get_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        return int(raw_value)
+    except ValueError:
+        return default
+
+
+OPENAI_REQUEST_TIMEOUT_SECONDS = _get_float_env("OPENAI_REQUEST_TIMEOUT_SECONDS", 20.0)
+OPENAI_REQUEST_MAX_ATTEMPTS = max(1, _get_int_env("OPENAI_REQUEST_MAX_ATTEMPTS", 3))
+OPENAI_RETRY_BACKOFF_SECONDS = _get_float_env("OPENAI_RETRY_BACKOFF_SECONDS", 0.5)
 
 
 def get_openai_model() -> str:
@@ -21,7 +46,7 @@ def _get_client() -> Any | None:
     except ImportError:
         return None
 
-    return OpenAI(api_key=api_key)
+    return OpenAI(api_key=api_key, timeout=OPENAI_REQUEST_TIMEOUT_SECONDS, max_retries=0)
 
 
 def _strip_code_fences(text: str) -> str:
@@ -41,22 +66,82 @@ def _load_json(text: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _is_retryable_exception(exc: Exception) -> bool:
+    error_name = exc.__class__.__name__.lower()
+    error_text = f"{error_name} {exc}".lower()
+    return any(
+        token in error_text
+        for token in (
+            "timeout",
+            "connection",
+            "temporarily",
+            "rate limit",
+            "server error",
+            "service unavailable",
+        )
+    )
+
+
+def _run_with_retries(client: Any, instructions: str, user_input: str) -> dict[str, Any] | None:
+    last_exception: Exception | None = None
+
+    for attempt in range(1, OPENAI_REQUEST_MAX_ATTEMPTS + 1):
+        try:
+            response = client.responses.create(
+                model=get_openai_model(),
+                instructions=instructions,
+                input=user_input,
+                timeout=OPENAI_REQUEST_TIMEOUT_SECONDS,
+            )
+            output_text = getattr(response, "output_text", "") or ""
+            parsed = _load_json(output_text)
+            if parsed is None:
+                logger.warning(
+                    "openai_response_invalid_json",
+                    extra={"attempt": attempt, "max_attempts": OPENAI_REQUEST_MAX_ATTEMPTS},
+                )
+            return parsed
+        except Exception as exc:  # pragma: no cover - provider-specific exception shape
+            last_exception = exc
+            retryable = _is_retryable_exception(exc)
+            if not retryable or attempt >= OPENAI_REQUEST_MAX_ATTEMPTS:
+                logger.warning(
+                    "openai_request_failed",
+                    extra={
+                        "attempt": attempt,
+                        "max_attempts": OPENAI_REQUEST_MAX_ATTEMPTS,
+                        "retryable": retryable,
+                        "error_type": exc.__class__.__name__,
+                    },
+                )
+                return None
+
+            sleep_seconds = OPENAI_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
+            logger.info(
+                "openai_request_retrying",
+                extra={
+                    "attempt": attempt,
+                    "max_attempts": OPENAI_REQUEST_MAX_ATTEMPTS,
+                    "sleep_seconds": sleep_seconds,
+                    "error_type": exc.__class__.__name__,
+                },
+            )
+            time.sleep(sleep_seconds)
+
+    if last_exception is not None:
+        logger.warning(
+            "openai_request_exhausted",
+            extra={"error_type": last_exception.__class__.__name__},
+        )
+    return None
+
+
 def _responses_json(instructions: str, user_input: str) -> dict[str, Any] | None:
     client = _get_client()
     if client is None:
         return None
 
-    try:
-        response = client.responses.create(
-            model=get_openai_model(),
-            instructions=instructions,
-            input=user_input,
-        )
-    except Exception:
-        return None
-
-    output_text = getattr(response, "output_text", "") or ""
-    return _load_json(output_text)
+    return _run_with_retries(client, instructions, user_input)
 
 
 def generate_assistant_payload(prompt: str, workflow_title: str) -> dict[str, Any] | None:

@@ -25,7 +25,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 
 - [x] Replace mocks/static data with real integrations or clear adapters
 - [x] Implement structured logs, metrics, and tracing
-- [ ] Standardize backend errors, retries, and timeouts
+- [x] Standardize backend errors, retries, and timeouts
 - [x] Cover critical flows with integration tests
 
 ## Phase 3 - Business Value
@@ -55,4 +55,5 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - The MVP scope is intentionally frozen around that path so we can avoid scope creep.
 - Request IDs and basic metrics are now available through the API for lightweight observability.
 - The active catalog comes from `backend/data/catalog.json` through an adapter, which makes future integrations easier to swap in.
+- Backend errors now return a consistent JSON shape, and OpenAI calls use bounded timeouts with retries before falling back to local logic.
 - The checklist should stay updated as work lands so it remains the source of truth for the project plan.

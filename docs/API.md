@@ -4,6 +4,20 @@ Base URL: `http://localhost:8000`
 
 When `OPENAI_API_KEY` is set, the assistant, prompt evaluation, and document analysis endpoints can use the OpenAI SDK. Without it, they fall back to deterministic local logic.
 
+OpenAI calls use bounded timeouts and a small retry loop controlled by `OPENAI_REQUEST_TIMEOUT_SECONDS`, `OPENAI_REQUEST_MAX_ATTEMPTS`, and `OPENAI_RETRY_BACKOFF_SECONDS`.
+
+Errors return a consistent JSON shape:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed.",
+    "details": []
+  }
+}
+```
+
 ## Health
 
 `GET /api/health`

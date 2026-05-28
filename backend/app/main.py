@@ -3,9 +3,14 @@ from __future__ import annotations
 import os
 import time
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.errors import AppError
 from app.models import (
     AssistantRequest,
     AssistantResponse,
@@ -26,6 +31,9 @@ from app.observability import (
 )
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
 from app.storage import initialize_storage, list_activity
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -59,6 +67,49 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def startup() -> None:
         initialize_storage()
+
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", None)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=exc.to_response(request_id=request_id),
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", None)
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "validation_error",
+                    "message": "Request validation failed.",
+                    "details": exc.errors(),
+                    "request_id": request_id,
+                }
+            },
+        )
+
+    @app.exception_handler(Exception)
+    async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", None)
+        logger.exception(
+            "unhandled_application_error",
+            extra={"request_id": request_id, "error_type": exc.__class__.__name__},
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "internal_server_error",
+                    "message": "An unexpected error occurred.",
+                    "request_id": request_id,
+                }
+            },
+        )
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
