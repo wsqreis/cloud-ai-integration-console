@@ -2,6 +2,8 @@
 
 The console is split into a React client and a Python API.
 
+The current MVP focus is supplier onboarding triage from supplier intake notes into Oracle Fusion Cloud.
+
 ## Frontend
 
 - React and TypeScript power the operational dashboard.

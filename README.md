@@ -3,6 +3,7 @@
 A full-stack integration workspace for prototyping AI-assisted cloud workflows, REST service orchestration, document analysis, and responsive operational dashboards.
 
 The application combines a React interface with a Python API to model the kinds of tools used by innovation teams when validating new integration ideas before customer delivery.
+The current MVP focus is supplier onboarding triage from intake notes into Oracle Fusion.
 
 ## Capabilities
 
@@ -37,6 +38,8 @@ docker compose up --build
 ```
 
 Open `http://localhost:8080`.
+
+The backend persists activity to `backend/data/cloud-ai-console.sqlite3` by default.
 
 ## Run The CLI
 
@@ -89,3 +92,5 @@ npm run build
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [API Reference](docs/API.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Primary Use Case](docs/USE_CASE.md)
