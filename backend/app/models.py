@@ -54,6 +54,8 @@ class AssistantResponse(BaseModel):
     suggested_steps: list[str]
     quality_checks: list[str]
     confidence: Literal["low", "medium", "high"]
+    review_id: int | None = None
+    review_status: Literal["pending", "approved", "rejected"] = "pending"
 
 
 class DocumentRequest(BaseModel):
@@ -80,9 +82,27 @@ class PromptEvaluation(BaseModel):
     improved_prompt: str
 
 
+class ReviewActionRequest(BaseModel):
+    reviewer: str = Field(default="local-operator", min_length=2, max_length=80)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class ReviewRecord(BaseModel):
+    id: int
+    workflow_id: str | None = None
+    workflow_title: str
+    prompt: str
+    status: Literal["pending", "approved", "rejected"]
+    reviewer: str | None = None
+    decision_note: str | None = None
+    response: AssistantResponse
+    created_at: str
+    reviewed_at: str | None = None
+
+
 class ActivityRecord(BaseModel):
     id: int
-    kind: Literal["assistant", "document", "prompt"]
+    kind: Literal["assistant", "document", "prompt", "review"]
     title: str
     summary: str
     workflow_id: str | None = None

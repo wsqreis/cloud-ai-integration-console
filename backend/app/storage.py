@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from app.models import ActivityRecord
+from app.models import ActivityRecord, AssistantResponse, ReviewRecord
 
 
-ActivityKind = Literal["assistant", "document", "prompt"]
+ActivityKind = Literal["assistant", "document", "prompt", "review"]
 
 
 def get_database_path() -> Path:
@@ -35,6 +35,22 @@ def initialize_storage() -> None:
                 input_json TEXT NOT NULL,
                 output_json TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS review_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workflow_id TEXT,
+                workflow_title TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                response_json TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                reviewer TEXT,
+                decision_note TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                reviewed_at TEXT
             )
             """
         )
@@ -108,3 +124,115 @@ def list_activity(
             ).fetchall()
 
     return [ActivityRecord.model_validate(dict(row)) for row in rows]
+
+
+def record_review(
+    workflow_id: str | None,
+    workflow_title: str,
+    prompt: str,
+    response_payload: dict[str, Any],
+) -> ReviewRecord:
+    initialize_storage()
+    with connect() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO review_records (workflow_id, workflow_title, prompt, response_json)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                workflow_id,
+                workflow_title,
+                prompt,
+                json.dumps(response_payload, ensure_ascii=False),
+            ),
+        )
+        row = connection.execute(
+            """
+            SELECT id, workflow_id, workflow_title, prompt, response_json, status,
+                   reviewer, decision_note, created_at, reviewed_at
+            FROM review_records
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+    return _row_to_review_record(row)
+
+
+def list_reviews(status: str | None = None) -> list[ReviewRecord]:
+    initialize_storage()
+    with connect() as connection:
+        if status is None:
+            rows = connection.execute(
+                """
+                SELECT id, workflow_id, workflow_title, prompt, response_json, status,
+                       reviewer, decision_note, created_at, reviewed_at
+                FROM review_records
+                ORDER BY id DESC
+                """
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT id, workflow_id, workflow_title, prompt, response_json, status,
+                       reviewer, decision_note, created_at, reviewed_at
+                FROM review_records
+                WHERE status = ?
+                ORDER BY id DESC
+                """,
+                (status,),
+            ).fetchall()
+
+    return [_row_to_review_record(row) for row in rows]
+
+
+def update_review(
+    review_id: int,
+    status: str,
+    reviewer: str,
+    decision_note: str | None = None,
+) -> ReviewRecord | None:
+    initialize_storage()
+    with connect() as connection:
+        connection.execute(
+            """
+            UPDATE review_records
+            SET status = ?, reviewer = ?, decision_note = ?, reviewed_at = datetime('now')
+            WHERE id = ?
+            """,
+            (status, reviewer, decision_note, review_id),
+        )
+        row = connection.execute(
+            """
+            SELECT id, workflow_id, workflow_title, prompt, response_json, status,
+                   reviewer, decision_note, created_at, reviewed_at
+            FROM review_records
+            WHERE id = ?
+            """,
+            (review_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+    return _row_to_review_record(row)
+
+
+def _row_to_review_record(row: sqlite3.Row) -> ReviewRecord:
+    response_payload = json.loads(row["response_json"])
+    response = AssistantResponse.model_validate(response_payload).model_copy(
+        update={"review_id": row["id"], "review_status": row["status"]}
+    )
+    return ReviewRecord.model_validate(
+        {
+            "id": row["id"],
+            "workflow_id": row["workflow_id"],
+            "workflow_title": row["workflow_title"],
+            "prompt": row["prompt"],
+            "status": row["status"],
+            "reviewer": row["reviewer"],
+            "decision_note": row["decision_note"],
+            "response": response.model_dump(),
+            "created_at": row["created_at"],
+            "reviewed_at": row["reviewed_at"],
+        }
+    )

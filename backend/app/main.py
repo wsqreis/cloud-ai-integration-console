@@ -22,6 +22,8 @@ from app.models import (
     Overview,
     PromptEvaluation,
     PromptEvaluationRequest,
+    ReviewActionRequest,
+    ReviewRecord,
 )
 from app.catalog import get_catalog_adapter
 from app.observability import (
@@ -30,7 +32,7 @@ from app.observability import (
     setup_logging,
 )
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
-from app.storage import initialize_storage, list_activity
+from app.storage import initialize_storage, list_activity, list_reviews, record_activity, update_review
 
 
 logger = logging.getLogger(__name__)
@@ -139,6 +141,67 @@ def create_app() -> FastAPI:
     @app.get("/api/activity", response_model=list[ActivityRecord])
     def activity(limit: int = 20) -> list[ActivityRecord]:
         return list_activity(limit=limit)
+
+    @app.get("/api/reviews", response_model=list[ReviewRecord])
+    def reviews(status: str | None = None) -> list[ReviewRecord]:
+        if status is not None and status not in {"pending", "approved", "rejected"}:
+            raise AppError(
+                code="invalid_review_status",
+                message="Review status must be pending, approved, or rejected.",
+                status_code=400,
+                details={"status": status},
+            )
+        return list_reviews(status=status)
+
+    @app.post("/api/reviews/{review_id}/approve", response_model=ReviewRecord)
+    def approve_review(review_id: int, request: ReviewActionRequest) -> ReviewRecord:
+        review = update_review(
+            review_id=review_id,
+            status="approved",
+            reviewer=request.reviewer,
+            decision_note=request.note,
+        )
+        if review is None:
+            raise AppError(
+                code="review_not_found",
+                message="Review item not found.",
+                status_code=404,
+                details={"review_id": review_id},
+            )
+        record_activity(
+            kind="review",
+            title=f"Review approved: {review.workflow_title}",
+            summary=f"Approved by {request.reviewer}.",
+            input_payload={"review_id": review_id, "reviewer": request.reviewer, "note": request.note},
+            output_payload=review.model_dump(),
+            workflow_id=review.workflow_id,
+        )
+        return review
+
+    @app.post("/api/reviews/{review_id}/reject", response_model=ReviewRecord)
+    def reject_review(review_id: int, request: ReviewActionRequest) -> ReviewRecord:
+        review = update_review(
+            review_id=review_id,
+            status="rejected",
+            reviewer=request.reviewer,
+            decision_note=request.note,
+        )
+        if review is None:
+            raise AppError(
+                code="review_not_found",
+                message="Review item not found.",
+                status_code=404,
+                details={"review_id": review_id},
+            )
+        record_activity(
+            kind="review",
+            title=f"Review rejected: {review.workflow_title}",
+            summary=f"Rejected by {request.reviewer}.",
+            input_payload={"review_id": review_id, "reviewer": request.reviewer, "note": request.note},
+            output_payload=review.model_dump(),
+            workflow_id=review.workflow_id,
+        )
+        return review
 
     @app.post("/api/assistant", response_model=AssistantResponse)
     def assistant(request: AssistantRequest) -> AssistantResponse:

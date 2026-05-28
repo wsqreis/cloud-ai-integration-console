@@ -19,13 +19,16 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  approveReview,
   analyzeDocument,
   askAssistant,
+  loadReviews,
   evaluatePrompt,
   loadActivity,
   loadIntegrations,
   loadOverview,
   loadWorkflows,
+  rejectReview,
 } from "./api";
 import architectureMap from "./assets/integration-map.svg";
 import type {
@@ -36,6 +39,7 @@ import type {
   Integration,
   Overview,
   PromptEvaluation,
+  ReviewRecord,
   Status,
 } from "./types";
 
@@ -56,6 +60,7 @@ export function App() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [workflows, setWorkflows] = useState<AutomationFlow[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityRecord[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<ReviewRecord[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("supplier-onboarding");
   const [prompt, setPrompt] = useState(samplePrompt);
   const [documentTitle, setDocumentTitle] = useState("Supplier intake notes");
@@ -66,16 +71,28 @@ export function App() {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   useEffect(() => {
-    void Promise.all([loadOverview(), loadIntegrations(), loadWorkflows(), loadActivity()]).then(
-      ([overviewData, integrationData, workflowData, activityData]) => {
+    void Promise.all([
+      loadOverview(),
+      loadIntegrations(),
+      loadWorkflows(),
+      loadActivity(),
+      loadReviews(),
+    ]).then(([overviewData, integrationData, workflowData, activityData, reviewData]) => {
         setOverview(overviewData);
         setIntegrations(integrationData);
         setWorkflows(workflowData);
         setActivityEntries(activityData);
+        setReviewQueue(reviewData);
         setSelectedWorkflowId(workflowData[0]?.id ?? "supplier-onboarding");
       },
     );
   }, []);
+
+  async function refreshReviewData() {
+    const [reviewData, activityData] = await Promise.all([loadReviews(), loadActivity()]);
+    setReviewQueue(reviewData);
+    setActivityEntries(activityData);
+  }
 
   const selectedWorkflow = useMemo(
     () => workflows.find((workflow) => workflow.id === selectedWorkflowId) ?? workflows[0],
@@ -87,6 +104,7 @@ export function App() {
     setLoadingAction("assistant");
     const response = await askAssistant(prompt, selectedWorkflowId);
     setAssistantResult(response);
+    await refreshReviewData();
     setLoadingAction(null);
   }
 
@@ -103,6 +121,20 @@ export function App() {
     const response = await evaluatePrompt(prompt);
     setPromptResult(response);
     setLoadingAction(null);
+  }
+
+  async function handleReviewDecision(reviewId: number, decision: "approve" | "reject") {
+    setLoadingAction(`${decision}-${reviewId}`);
+    try {
+      if (decision === "approve") {
+        await approveReview(reviewId);
+      } else {
+        await rejectReview(reviewId);
+      }
+      await refreshReviewData();
+    } finally {
+      setLoadingAction(null);
+    }
   }
 
   return (
@@ -367,17 +399,92 @@ export function App() {
               <Bot size={22} aria-hidden="true" />
             </div>
             {assistantResult ? (
-              <ResultList
-                lead={assistantResult.answer}
-                groups={[
-                  ["Suggested steps", assistantResult.suggested_steps],
-                  ["Quality checks", assistantResult.quality_checks],
-                  ["Assumptions", assistantResult.assumptions],
-                ]}
-              />
+              <div className="result-list">
+                <div className="result-block">
+                  <strong>{assistantResult.answer}</strong>
+                  <span>
+                    Review status: {assistantResult.review_status}
+                    {assistantResult.review_id ? ` · Review #${assistantResult.review_id}` : ""}
+                  </span>
+                </div>
+                <ResultList
+                  lead=""
+                  groups={[
+                    ["Suggested steps", assistantResult.suggested_steps],
+                    ["Quality checks", assistantResult.quality_checks],
+                    ["Assumptions", assistantResult.assumptions],
+                  ]}
+                />
+              </div>
             ) : (
               <EmptyState text="Submit a prompt to generate a structured integration review." />
             )}
+          </div>
+        </section>
+
+        <section className="panel" id="reviews">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Review queue</p>
+              <h3>Human approval</h3>
+            </div>
+            <ShieldCheck size={22} aria-hidden="true" />
+          </div>
+          <div className="activity-feed">
+            {reviewQueue.map((review) => (
+              <article className="review-card" key={review.id}>
+                <div className="activity-main">
+                  <div className={`activity-kind ${review.status}`}>{review.status}</div>
+                  <div>
+                    <strong>
+                      {review.workflow_title} #{review.id}
+                    </strong>
+                    <p>{review.response.answer}</p>
+                    <small>{review.prompt}</small>
+                  </div>
+                </div>
+                <div className="review-actions">
+                  <small>
+                    {review.reviewer ? `Reviewed by ${review.reviewer}` : "Waiting for review"}
+                  </small>
+                  <div className="tag-row">
+                    <span>{review.reviewed_at ?? review.created_at}</span>
+                    <span>{review.response.confidence} confidence</span>
+                  </div>
+                  {review.status === "pending" ? (
+                    <div className="form-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => handleReviewDecision(review.id, "reject")}
+                      >
+                        {loadingAction === `reject-${review.id}` ? (
+                          <Loader2 className="spin" size={18} aria-hidden="true" />
+                        ) : null}
+                        Reject
+                      </button>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => handleReviewDecision(review.id, "approve")}
+                      >
+                        {loadingAction === `approve-${review.id}` ? (
+                          <Loader2 className="spin" size={18} aria-hidden="true" />
+                        ) : null}
+                        Approve
+                      </button>
+                    </div>
+                  ) : (
+                    <small>
+                      {review.status === "approved"
+                        ? "Ready to publish downstream."
+                        : "Returned for revision."}
+                    </small>
+                  )}
+                </div>
+              </article>
+            ))}
+            {reviewQueue.length === 0 ? <EmptyState text="Send a prompt to queue a review item." /> : null}
           </div>
         </section>
 
@@ -443,7 +550,7 @@ export function App() {
 function ResultList({ lead, groups }: { lead: string; groups: [string, string[]][] }) {
   return (
     <div className="result-list">
-      <p>{lead}</p>
+      {lead ? <p>{lead}</p> : null}
       {groups.map(([title, items]) => (
         <section key={title}>
           <h4>{title}</h4>

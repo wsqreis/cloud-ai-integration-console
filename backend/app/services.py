@@ -14,7 +14,7 @@ from app.openai_service import (
     generate_document_analysis_payload,
     generate_prompt_evaluation_payload,
 )
-from app.storage import initialize_storage, record_activity
+from app.storage import initialize_storage, record_activity, record_review
 
 
 SYSTEM_KEYWORDS = {
@@ -69,17 +69,10 @@ def plan_assistant_reply(prompt: str, workflow_id: str | None = None) -> Assista
     if openai_payload is not None:
         try:
             result = AssistantResponse.model_validate(openai_payload)
-            record_activity(
-                kind="assistant",
-                title=workflow_title,
-                summary=result.answer,
-                input_payload={"prompt": normalized, "workflow_id": workflow_id},
-                output_payload=result.model_dump(),
-                workflow_id=workflow_id,
-            )
-            return result
         except Exception:
-            pass
+            result = None
+        else:
+            return persist_assistant_review(result, normalized, workflow_title, workflow_id)
 
     result = AssistantResponse(
         answer=(
@@ -100,15 +93,39 @@ def plan_assistant_reply(prompt: str, workflow_id: str | None = None) -> Assista
         ],
         confidence=confidence,
     )
+    return persist_assistant_review(result, normalized, workflow_title, workflow_id)
+
+
+def persist_assistant_review(
+    result: AssistantResponse,
+    prompt: str,
+    workflow_title: str,
+    workflow_id: str | None,
+) -> AssistantResponse:
+    review_record = record_review(
+        workflow_id=workflow_id,
+        workflow_title=workflow_title,
+        prompt=prompt,
+        response_payload=result.model_dump(),
+    )
+    reviewed_result = result.model_copy(update={"review_id": review_record.id, "review_status": "pending"})
     record_activity(
         kind="assistant",
         title=workflow_title,
-        summary=result.answer,
-        input_payload={"prompt": normalized, "workflow_id": workflow_id},
-        output_payload=result.model_dump(),
+        summary=reviewed_result.answer,
+        input_payload={"prompt": prompt, "workflow_id": workflow_id},
+        output_payload=reviewed_result.model_dump(),
         workflow_id=workflow_id,
     )
-    return result
+    record_activity(
+        kind="review",
+        title=f"Review queued: {workflow_title}",
+        summary=f"Review #{review_record.id} awaiting human approval.",
+        input_payload={"prompt": prompt, "workflow_id": workflow_id, "review_id": review_record.id},
+        output_payload=review_record.model_dump(),
+        workflow_id=workflow_id,
+    )
+    return reviewed_result
 
 
 def analyze_document(title: str, content: str) -> DocumentAnalysis:

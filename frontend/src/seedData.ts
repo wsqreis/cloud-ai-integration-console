@@ -6,6 +6,7 @@ import type {
   Integration,
   Overview,
   PromptEvaluation,
+  ReviewRecord,
 } from "./types";
 
 export const overview: Overview = {
@@ -96,6 +97,8 @@ export const assistantResponse: AssistantResponse = {
     "Is there a fallback when the AI response is incomplete?",
   ],
   confidence: "medium",
+  review_id: 1,
+  review_status: "pending",
 };
 
 export const documentAnalysis: DocumentAnalysis = {
@@ -115,7 +118,30 @@ export const promptEvaluation: PromptEvaluation = {
     "Given the business outcome, source system, target system, constraints, and sample data, produce a structured recommendation with assumptions, risks, validation steps, and a clear next action list.",
 };
 
+export const reviews: ReviewRecord[] = [
+  {
+    id: 4,
+    workflow_id: "supplier-onboarding",
+    workflow_title: "Supplier Onboarding Triage",
+    prompt: "Goal: reduce manual supplier review by validating intake notes before ERP updates.",
+    status: "pending",
+    decision_note: null,
+    reviewer: null,
+    response: assistantResponse,
+    created_at: "just now",
+    reviewed_at: null,
+  },
+];
+
 export const activity: ActivityRecord[] = [
+  {
+    id: 4,
+    kind: "review",
+    title: "Review queued: Supplier Onboarding Triage",
+    summary: "Review #4 awaiting human approval.",
+    workflow_id: "supplier-onboarding",
+    created_at: "just now",
+  },
   {
     id: 3,
     kind: "prompt",

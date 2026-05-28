@@ -28,6 +28,7 @@ The prototype models common enterprise integration patterns:
 - Health and latency monitoring for connector readiness.
 - AI-assisted summarization and workflow planning.
 - Human review checkpoints before automated changes are promoted.
+- Planner suggestions create persisted review records that can be approved or rejected in the console.
 
 ## Extension Points
 

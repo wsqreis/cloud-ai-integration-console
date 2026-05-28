@@ -45,8 +45,8 @@ def test_activity_endpoint_returns_recent_records(monkeypatch, tmp_path) -> None
     assert activity_response.status_code == 200
     activity_items = activity_response.json()
     assert activity_items
-    assert activity_items[0]["kind"] == "assistant"
-    assert activity_items[0]["title"] == "Supplier Onboarding Triage"
+    assert activity_items[0]["kind"] == "review"
+    assert any(item["kind"] == "assistant" and item["title"] == "Supplier Onboarding Triage" for item in activity_items)
 
 
 def test_metrics_endpoint_tracks_requests(monkeypatch, tmp_path) -> None:

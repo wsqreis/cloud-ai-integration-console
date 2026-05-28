@@ -186,6 +186,7 @@ main {
 }
 
 .primary-button,
+.secondary-button,
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -207,6 +208,21 @@ main {
 .primary-button:focus-visible {
   background: #25574d;
   outline: 3px solid #b9d9cf;
+}
+
+.secondary-button {
+  gap: 8px;
+  padding: 10px 14px;
+  color: #12312b;
+  background: #edf6f2;
+  border: 1px solid #c9ddd6;
+  font-weight: 800;
+}
+
+.secondary-button:hover,
+.secondary-button:focus-visible {
+  background: #d8efe6;
+  outline: 3px solid #d8efe6;
 }
 
 .icon-button {
@@ -435,9 +451,32 @@ main {
   background: var(--coral-soft);
 }
 
+.activity-kind.review {
+  color: #4d2a7a;
+  background: #e7ddf6;
+}
+
 .activity-row small {
   color: var(--muted);
   white-space: nowrap;
+}
+
+.review-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface-quiet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.review-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.review-actions small {
+  color: var(--muted);
 }
 
 .workflow-row {

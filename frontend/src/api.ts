@@ -5,6 +5,7 @@ import {
   integrations,
   overview,
   promptEvaluation,
+  reviews,
   workflows,
 } from "./seedData";
 import type {
@@ -15,6 +16,7 @@ import type {
   Integration,
   Overview,
   PromptEvaluation,
+  ReviewRecord,
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -59,6 +61,10 @@ export function loadActivity(): Promise<ActivityRecord[]> {
   return withFallback(() => request<ActivityRecord[]>("/api/activity"), activity);
 }
 
+export function loadReviews(): Promise<ReviewRecord[]> {
+  return withFallback(() => request<ReviewRecord[]>("/api/reviews"), reviews);
+}
+
 export function askAssistant(prompt: string, workflowId: string): Promise<AssistantResponse> {
   return withFallback(
     () =>
@@ -68,6 +74,20 @@ export function askAssistant(prompt: string, workflowId: string): Promise<Assist
       }),
     assistantResponse,
   );
+}
+
+export function approveReview(reviewId: number, reviewer = "local-operator"): Promise<ReviewRecord> {
+  return request<ReviewRecord>(`/api/reviews/${reviewId}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ reviewer }),
+  });
+}
+
+export function rejectReview(reviewId: number, reviewer = "local-operator"): Promise<ReviewRecord> {
+  return request<ReviewRecord>(`/api/reviews/${reviewId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reviewer }),
+  });
 }
 
 export function analyzeDocument(title: string, content: string): Promise<DocumentAnalysis> {

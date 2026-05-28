@@ -44,6 +44,8 @@ export interface AssistantResponse {
   suggested_steps: string[];
   quality_checks: string[];
   confidence: "low" | "medium" | "high";
+  review_id?: number | null;
+  review_status?: "pending" | "approved" | "rejected";
 }
 
 export interface DocumentAnalysis {
@@ -61,9 +63,22 @@ export interface PromptEvaluation {
   improved_prompt: string;
 }
 
+export interface ReviewRecord {
+  id: number;
+  workflow_id?: string | null;
+  workflow_title: string;
+  prompt: string;
+  status: "pending" | "approved" | "rejected";
+  reviewer?: string | null;
+  decision_note?: string | null;
+  response: AssistantResponse;
+  created_at: string;
+  reviewed_at?: string | null;
+}
+
 export interface ActivityRecord {
   id: number;
-  kind: "assistant" | "document" | "prompt";
+  kind: "assistant" | "document" | "prompt" | "review";
   title: string;
   summary: string;
   workflow_id?: string | null;
