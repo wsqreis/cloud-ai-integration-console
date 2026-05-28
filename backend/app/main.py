@@ -18,6 +18,7 @@ from app.models import (
     PromptEvaluationRequest,
 )
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
+from app.storage import initialize_storage
 
 
 def create_app() -> FastAPI:
@@ -39,6 +40,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.on_event("startup")
+    def startup() -> None:
+        initialize_storage()
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
@@ -72,4 +77,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

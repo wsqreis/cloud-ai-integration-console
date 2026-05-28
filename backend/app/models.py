@@ -79,3 +79,11 @@ class PromptEvaluation(BaseModel):
     gaps: list[str]
     improved_prompt: str
 
+
+class ActivityRecord(BaseModel):
+    id: int
+    kind: Literal["assistant", "document", "prompt"]
+    title: str
+    summary: str
+    workflow_id: str | None = None
+    created_at: str

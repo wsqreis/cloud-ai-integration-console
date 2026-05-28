@@ -14,6 +14,7 @@ from app.openai_service import (
     generate_document_analysis_payload,
     generate_prompt_evaluation_payload,
 )
+from app.storage import initialize_storage, record_activity
 
 
 SYSTEM_KEYWORDS = {
@@ -71,14 +72,24 @@ def plan_assistant_reply(prompt: str, workflow_id: str | None = None) -> Assista
     if "document" in normalized.lower() or "notes" in normalized.lower():
         suggested_steps.insert(2, "Add document extraction with structured output validation.")
 
+    initialize_storage()
     openai_payload = generate_assistant_payload(normalized, workflow_title)
     if openai_payload is not None:
         try:
-            return AssistantResponse.model_validate(openai_payload)
+            result = AssistantResponse.model_validate(openai_payload)
+            record_activity(
+                kind="assistant",
+                title=workflow_title,
+                summary=result.answer,
+                input_payload={"prompt": normalized, "workflow_id": workflow_id},
+                output_payload=result.model_dump(),
+                workflow_id=workflow_id,
+            )
+            return result
         except Exception:
             pass
 
-    return AssistantResponse(
+    result = AssistantResponse(
         answer=(
             f"For {workflow_title}, start with a narrow proof of concept that proves the data "
             "path, the AI review step, and the operational handoff before expanding scope."
@@ -97,6 +108,15 @@ def plan_assistant_reply(prompt: str, workflow_id: str | None = None) -> Assista
         ],
         confidence=confidence,
     )
+    record_activity(
+        kind="assistant",
+        title=workflow_title,
+        summary=result.answer,
+        input_payload={"prompt": normalized, "workflow_id": workflow_id},
+        output_payload=result.model_dump(),
+        workflow_id=workflow_id,
+    )
+    return result
 
 
 def analyze_document(title: str, content: str) -> DocumentAnalysis:
@@ -105,20 +125,37 @@ def analyze_document(title: str, content: str) -> DocumentAnalysis:
     risks = extract_risks(content)
     opportunities = extract_automation_opportunities(content)
 
+    initialize_storage()
     openai_payload = generate_document_analysis_payload(title, content)
     if openai_payload is not None:
         try:
-            return DocumentAnalysis.model_validate(openai_payload)
+            result = DocumentAnalysis.model_validate(openai_payload)
+            record_activity(
+                kind="document",
+                title=title,
+                summary=result.summary,
+                input_payload={"title": title, "content": content},
+                output_payload=result.model_dump(),
+            )
+            return result
         except Exception:
             pass
 
-    return DocumentAnalysis(
+    result = DocumentAnalysis(
         summary=build_summary(title, content, detected_systems),
         detected_systems=detected_systems,
         action_items=action_items,
         risks=risks,
         automation_opportunities=opportunities,
     )
+    record_activity(
+        kind="document",
+        title=title,
+        summary=result.summary,
+        input_payload={"title": title, "content": content},
+        output_payload=result.model_dump(),
+    )
+    return result
 
 
 def detect_systems(text: str) -> list[str]:
@@ -197,6 +234,7 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
     else:
         gaps.append("Add more context about constraints, users, and data quality.")
 
+    initialize_storage()
     improved_prompt = (
         "Given the business outcome, source system, target system, constraints, and sample data, "
         "produce a structured recommendation with assumptions, risks, validation steps, and a "
@@ -206,16 +244,32 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
     openai_payload = generate_prompt_evaluation_payload(prompt)
     if openai_payload is not None:
         try:
-            return PromptEvaluation.model_validate(openai_payload)
+            result = PromptEvaluation.model_validate(openai_payload)
+            record_activity(
+                kind="prompt",
+                title="Prompt evaluation",
+                summary=f"Score {result.score}/100",
+                input_payload={"prompt": prompt},
+                output_payload=result.model_dump(),
+            )
+            return result
         except Exception:
             pass
 
-    return PromptEvaluation(
+    result = PromptEvaluation(
         score=min(score, 100),
         strengths=strengths or ["The prompt is a workable starting point."],
         gaps=gaps,
         improved_prompt=improved_prompt,
     )
+    record_activity(
+        kind="prompt",
+        title="Prompt evaluation",
+        summary=f"Score {result.score}/100",
+        input_payload={"prompt": prompt},
+        output_payload=result.model_dump(),
+    )
+    return result
 
 
 def build_summary(title: str, content: str, detected_systems: list[str]) -> str:

@@ -18,3 +18,5 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
+backend/data/*.sqlite3
+backend/data/*.db
