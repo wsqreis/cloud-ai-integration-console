@@ -63,6 +63,18 @@ export interface PromptEvaluation {
   improved_prompt: string;
 }
 
+export interface PromptHistoryRecord {
+  id: number;
+  kind: "assistant" | "document" | "prompt";
+  title: string;
+  workflow_id?: string | null;
+  version: number;
+  prompt: string;
+  response_summary: string;
+  response_payload: unknown;
+  created_at: string;
+}
+
 export interface ReviewRecord {
   id: number;
   workflow_id?: string | null;

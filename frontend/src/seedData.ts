@@ -6,6 +6,7 @@ import type {
   Integration,
   Overview,
   PromptEvaluation,
+  PromptHistoryRecord,
   ReviewRecord,
 } from "./types";
 
@@ -130,6 +131,42 @@ export const reviews: ReviewRecord[] = [
     response: assistantResponse,
     created_at: "just now",
     reviewed_at: null,
+  },
+];
+
+export const promptHistory: PromptHistoryRecord[] = [
+  {
+    id: 3,
+    kind: "assistant",
+    title: "Supplier Onboarding Triage",
+    workflow_id: "supplier-onboarding",
+    version: 2,
+    prompt: "Goal: reduce manual supplier review by validating intake notes before ERP updates.",
+    response_summary: "Start with a narrow proof of concept that proves the data path.",
+    response_payload: assistantResponse,
+    created_at: "just now",
+  },
+  {
+    id: 2,
+    kind: "prompt",
+    title: "Prompt evaluation",
+    workflow_id: null,
+    version: 2,
+    prompt: "Goal: reduce manual review. Use Oracle Fusion and REST APIs. Return JSON with risks.",
+    response_summary: "Score 72/100",
+    response_payload: promptEvaluation,
+    created_at: "5 minutes ago",
+  },
+  {
+    id: 1,
+    kind: "document",
+    title: "Supplier intake notes",
+    workflow_id: null,
+    version: 1,
+    prompt: "The supplier record is missing tax fields and approval ownership.",
+    response_summary: "The note references Oracle Fusion, REST API, and OCI Generative AI.",
+    response_payload: documentAnalysis,
+    created_at: "8 minutes ago",
   },
 ];
 

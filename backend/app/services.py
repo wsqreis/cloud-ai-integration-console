@@ -14,7 +14,7 @@ from app.openai_service import (
     generate_document_analysis_payload,
     generate_prompt_evaluation_payload,
 )
-from app.storage import initialize_storage, record_activity, record_review
+from app.storage import initialize_storage, record_activity, record_prompt_version, record_review
 
 
 SYSTEM_KEYWORDS = {
@@ -117,6 +117,14 @@ def persist_assistant_review(
         output_payload=reviewed_result.model_dump(),
         workflow_id=workflow_id,
     )
+    record_prompt_version(
+        kind="assistant",
+        title=workflow_title,
+        workflow_id=workflow_id,
+        prompt=prompt,
+        response_summary=reviewed_result.answer,
+        response_payload=reviewed_result.model_dump(),
+    )
     record_activity(
         kind="review",
         title=f"Review queued: {workflow_title}",
@@ -163,6 +171,13 @@ def analyze_document(title: str, content: str) -> DocumentAnalysis:
         summary=result.summary,
         input_payload={"title": title, "content": content},
         output_payload=result.model_dump(),
+    )
+    record_prompt_version(
+        kind="document",
+        title=title,
+        prompt=content,
+        response_summary=result.summary,
+        response_payload=result.model_dump(),
     )
     return result
 
@@ -261,6 +276,13 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
                 input_payload={"prompt": prompt},
                 output_payload=result.model_dump(),
             )
+            record_prompt_version(
+                kind="prompt",
+                title="Prompt evaluation",
+                prompt=prompt,
+                response_summary=f"Score {result.score}/100",
+                response_payload=result.model_dump(),
+            )
             return result
         except Exception:
             pass
@@ -277,6 +299,13 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
         summary=f"Score {result.score}/100",
         input_payload={"prompt": prompt},
         output_payload=result.model_dump(),
+    )
+    record_prompt_version(
+        kind="prompt",
+        title="Prompt evaluation",
+        prompt=prompt,
+        response_summary=f"Score {result.score}/100",
+        response_payload=result.model_dump(),
     )
     return result
 

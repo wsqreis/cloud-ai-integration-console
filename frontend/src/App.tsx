@@ -22,11 +22,12 @@ import {
   approveReview,
   analyzeDocument,
   askAssistant,
-  loadReviews,
   evaluatePrompt,
   loadActivity,
   loadIntegrations,
+  loadPromptHistory,
   loadOverview,
+  loadReviews,
   loadWorkflows,
   rejectReview,
 } from "./api";
@@ -38,6 +39,7 @@ import type {
   DocumentAnalysis,
   Integration,
   Overview,
+  PromptHistoryRecord,
   PromptEvaluation,
   ReviewRecord,
   Status,
@@ -60,6 +62,7 @@ export function App() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [workflows, setWorkflows] = useState<AutomationFlow[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityRecord[]>([]);
+  const [promptHistoryEntries, setPromptHistoryEntries] = useState<PromptHistoryRecord[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewRecord[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("supplier-onboarding");
   const [prompt, setPrompt] = useState(samplePrompt);
@@ -76,22 +79,29 @@ export function App() {
       loadIntegrations(),
       loadWorkflows(),
       loadActivity(),
+      loadPromptHistory(),
       loadReviews(),
-    ]).then(([overviewData, integrationData, workflowData, activityData, reviewData]) => {
+    ]).then(([overviewData, integrationData, workflowData, activityData, historyData, reviewData]) => {
         setOverview(overviewData);
         setIntegrations(integrationData);
         setWorkflows(workflowData);
         setActivityEntries(activityData);
+        setPromptHistoryEntries(historyData);
         setReviewQueue(reviewData);
         setSelectedWorkflowId(workflowData[0]?.id ?? "supplier-onboarding");
       },
     );
   }, []);
 
-  async function refreshReviewData() {
-    const [reviewData, activityData] = await Promise.all([loadReviews(), loadActivity()]);
+  async function refreshDashboardData() {
+    const [reviewData, activityData, historyData] = await Promise.all([
+      loadReviews(),
+      loadActivity(),
+      loadPromptHistory(),
+    ]);
     setReviewQueue(reviewData);
     setActivityEntries(activityData);
+    setPromptHistoryEntries(historyData);
   }
 
   const selectedWorkflow = useMemo(
@@ -104,7 +114,7 @@ export function App() {
     setLoadingAction("assistant");
     const response = await askAssistant(prompt, selectedWorkflowId);
     setAssistantResult(response);
-    await refreshReviewData();
+    await refreshDashboardData();
     setLoadingAction(null);
   }
 
@@ -113,6 +123,7 @@ export function App() {
     setLoadingAction("document");
     const response = await analyzeDocument(documentTitle, documentText);
     setDocumentResult(response);
+    await refreshDashboardData();
     setLoadingAction(null);
   }
 
@@ -120,6 +131,7 @@ export function App() {
     setLoadingAction("prompt");
     const response = await evaluatePrompt(prompt);
     setPromptResult(response);
+    await refreshDashboardData();
     setLoadingAction(null);
   }
 
@@ -131,7 +143,7 @@ export function App() {
       } else {
         await rejectReview(reviewId);
       }
-      await refreshReviewData();
+      await refreshDashboardData();
     } finally {
       setLoadingAction(null);
     }
@@ -485,6 +497,36 @@ export function App() {
               </article>
             ))}
             {reviewQueue.length === 0 ? <EmptyState text="Send a prompt to queue a review item." /> : null}
+          </div>
+        </section>
+
+        <section className="panel" id="history">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Prompt history</p>
+              <h3>Versioned prompts and responses</h3>
+            </div>
+            <Clock3 size={22} aria-hidden="true" />
+          </div>
+          <div className="history-grid">
+            {promptHistoryEntries.map((entry) => (
+              <article className="history-card" key={entry.id}>
+                <div className="connector-topline">
+                  <div>
+                    <h4>
+                      {entry.title} · v{entry.version}
+                    </h4>
+                    <p>{entry.kind}</p>
+                  </div>
+                  <span className="status-pill planned">{entry.created_at}</span>
+                </div>
+                <p className="muted-copy">{entry.prompt}</p>
+                <div className="result-block">
+                  <strong>{entry.response_summary}</strong>
+                  <span>{JSON.stringify(entry.response_payload)}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 

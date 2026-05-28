@@ -22,6 +22,7 @@ from app.models import (
     Overview,
     PromptEvaluation,
     PromptEvaluationRequest,
+    PromptVersionRecord,
     ReviewActionRequest,
     ReviewRecord,
 )
@@ -32,7 +33,14 @@ from app.observability import (
     setup_logging,
 )
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
-from app.storage import initialize_storage, list_activity, list_reviews, record_activity, update_review
+from app.storage import (
+    initialize_storage,
+    list_activity,
+    list_prompt_versions,
+    list_reviews,
+    record_activity,
+    update_review,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -141,6 +149,21 @@ def create_app() -> FastAPI:
     @app.get("/api/activity", response_model=list[ActivityRecord])
     def activity(limit: int = 20) -> list[ActivityRecord]:
         return list_activity(limit=limit)
+
+    @app.get("/api/prompt-history", response_model=list[PromptVersionRecord])
+    def prompt_history(
+        kind: str | None = None,
+        workflow_id: str | None = None,
+        limit: int = 20,
+    ) -> list[PromptVersionRecord]:
+        if kind is not None and kind not in {"assistant", "document", "prompt"}:
+            raise AppError(
+                code="invalid_prompt_history_kind",
+                message="Prompt history kind must be assistant, document, or prompt.",
+                status_code=400,
+                details={"kind": kind},
+            )
+        return list_prompt_versions(limit=limit, kind=kind, workflow_id=workflow_id)
 
     @app.get("/api/reviews", response_model=list[ReviewRecord])
     def reviews(status: str | None = None) -> list[ReviewRecord]:

@@ -4,6 +4,7 @@ import {
   documentAnalysis,
   integrations,
   overview,
+  promptHistory,
   promptEvaluation,
   reviews,
   workflows,
@@ -15,6 +16,7 @@ import type {
   DocumentAnalysis,
   Integration,
   Overview,
+  PromptHistoryRecord,
   PromptEvaluation,
   ReviewRecord,
 } from "./types";
@@ -59,6 +61,10 @@ export function loadWorkflows(): Promise<AutomationFlow[]> {
 
 export function loadActivity(): Promise<ActivityRecord[]> {
   return withFallback(() => request<ActivityRecord[]>("/api/activity"), activity);
+}
+
+export function loadPromptHistory(): Promise<PromptHistoryRecord[]> {
+  return withFallback(() => request<PromptHistoryRecord[]>("/api/prompt-history"), promptHistory);
 }
 
 export function loadReviews(): Promise<ReviewRecord[]> {

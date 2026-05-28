@@ -29,6 +29,7 @@ The prototype models common enterprise integration patterns:
 - AI-assisted summarization and workflow planning.
 - Human review checkpoints before automated changes are promoted.
 - Planner suggestions create persisted review records that can be approved or rejected in the console.
+- Prompt runs are versioned in a separate history table so responses can be compared over time.
 
 ## Extension Points
 
@@ -36,4 +37,4 @@ The prototype models common enterprise integration patterns:
 - Swap the default model and prompts as customer needs evolve.
 - Add OAuth-backed connector adapters.
 - Persist workflow state in a relational database.
-- Add audit logs for prompt inputs, generated outputs, and reviewer decisions.
+- Add audit logs for prompt inputs, generated outputs, reviewer decisions, and prompt versions.

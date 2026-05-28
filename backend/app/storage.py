@@ -7,10 +7,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from app.models import ActivityRecord, AssistantResponse, ReviewRecord
+from app.models import ActivityRecord, AssistantResponse, PromptVersionRecord, ReviewRecord
 
 
 ActivityKind = Literal["assistant", "document", "prompt", "review"]
+PromptVersionKind = Literal["assistant", "document", "prompt"]
 
 
 def get_database_path() -> Path:
@@ -51,6 +52,21 @@ def initialize_storage() -> None:
                 decision_note TEXT,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 reviewed_at TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_versions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                workflow_id TEXT,
+                version INTEGER NOT NULL,
+                prompt_text TEXT NOT NULL,
+                response_summary TEXT NOT NULL,
+                response_json TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
             """
         )
@@ -234,5 +250,109 @@ def _row_to_review_record(row: sqlite3.Row) -> ReviewRecord:
             "response": response.model_dump(),
             "created_at": row["created_at"],
             "reviewed_at": row["reviewed_at"],
+        }
+    )
+
+
+def record_prompt_version(
+    kind: PromptVersionKind,
+    title: str,
+    prompt: str,
+    response_summary: str,
+    response_payload: dict[str, Any],
+    workflow_id: str | None = None,
+) -> PromptVersionRecord:
+    initialize_storage()
+    with connect() as connection:
+        if workflow_id is None:
+            version_row = connection.execute(
+                """
+                SELECT COALESCE(MAX(version), 0) + 1 AS next_version
+                FROM prompt_versions
+                WHERE kind = ? AND title = ? AND workflow_id IS NULL
+                """,
+                (kind, title),
+            ).fetchone()
+        else:
+            version_row = connection.execute(
+                """
+                SELECT COALESCE(MAX(version), 0) + 1 AS next_version
+                FROM prompt_versions
+                WHERE kind = ? AND title = ? AND workflow_id = ?
+                """,
+                (kind, title, workflow_id),
+            ).fetchone()
+
+        version = int(version_row["next_version"]) if version_row is not None else 1
+        cursor = connection.execute(
+            """
+            INSERT INTO prompt_versions (kind, title, workflow_id, version, prompt_text, response_summary, response_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                kind,
+                title,
+                workflow_id,
+                version,
+                prompt,
+                response_summary,
+                json.dumps(response_payload, ensure_ascii=False),
+            ),
+        )
+        row = connection.execute(
+            """
+            SELECT id, kind, title, workflow_id, version, prompt_text, response_summary,
+                   response_json, created_at
+            FROM prompt_versions
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+    return _row_to_prompt_version_record(row)
+
+
+def list_prompt_versions(
+    limit: int = 20,
+    kind: PromptVersionKind | None = None,
+    workflow_id: str | None = None,
+) -> list[PromptVersionRecord]:
+    initialize_storage()
+    with connect() as connection:
+        query = """
+            SELECT id, kind, title, workflow_id, version, prompt_text, response_summary,
+                   response_json, created_at
+            FROM prompt_versions
+        """
+        parameters: list[Any] = []
+        clauses: list[str] = []
+        if kind is not None:
+            clauses.append("kind = ?")
+            parameters.append(kind)
+        if workflow_id is not None:
+            clauses.append("workflow_id = ?")
+            parameters.append(workflow_id)
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY id DESC LIMIT ?"
+        parameters.append(limit)
+        rows = connection.execute(query, parameters).fetchall()
+
+    return [_row_to_prompt_version_record(row) for row in rows]
+
+
+def _row_to_prompt_version_record(row: sqlite3.Row) -> PromptVersionRecord:
+    response_payload = json.loads(row["response_json"])
+    return PromptVersionRecord.model_validate(
+        {
+            "id": row["id"],
+            "kind": row["kind"],
+            "title": row["title"],
+            "workflow_id": row["workflow_id"],
+            "version": row["version"],
+            "prompt": row["prompt_text"],
+            "response_summary": row["response_summary"],
+            "response_payload": response_payload,
+            "created_at": row["created_at"],
         }
     )

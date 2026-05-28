@@ -479,6 +479,20 @@ main {
   color: var(--muted);
 }
 
+.history-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.history-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-quiet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .workflow-row {
   display: flex;
   gap: 12px;

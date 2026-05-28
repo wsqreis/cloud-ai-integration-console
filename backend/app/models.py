@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -80,6 +81,18 @@ class PromptEvaluation(BaseModel):
     strengths: list[str]
     gaps: list[str]
     improved_prompt: str
+
+
+class PromptVersionRecord(BaseModel):
+    id: int
+    kind: Literal["assistant", "document", "prompt"]
+    title: str
+    workflow_id: str | None = None
+    version: int
+    prompt: str
+    response_summary: str
+    response_payload: dict[str, Any]
+    created_at: str
 
 
 class ReviewActionRequest(BaseModel):

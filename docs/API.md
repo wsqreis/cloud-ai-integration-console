@@ -8,6 +8,8 @@ OpenAI calls use bounded timeouts and a small retry loop controlled by `OPENAI_R
 
 The AI planner now creates a review item that can be approved or rejected through the review endpoints.
 
+Every assistant, prompt evaluation, and document triage run is also written to the prompt history log with a version number.
+
 Errors return a consistent JSON shape:
 
 ```json
@@ -94,6 +96,15 @@ Request:
 ```
 
 Response includes a score, strengths, gaps, and an improved prompt.
+
+## Prompt History
+
+`GET /api/prompt-history`
+
+Returns versioned prompt history entries. Optional filters:
+
+- `kind=assistant|document|prompt`
+- `workflow_id=supplier-onboarding`
 
 ## Review Queue
 
