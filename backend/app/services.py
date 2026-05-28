@@ -9,6 +9,11 @@ from app.models import (
     Overview,
     PromptEvaluation,
 )
+from app.openai_service import (
+    generate_assistant_payload,
+    generate_document_analysis_payload,
+    generate_prompt_evaluation_payload,
+)
 
 
 SYSTEM_KEYWORDS = {
@@ -66,6 +71,13 @@ def plan_assistant_reply(prompt: str, workflow_id: str | None = None) -> Assista
     if "document" in normalized.lower() or "notes" in normalized.lower():
         suggested_steps.insert(2, "Add document extraction with structured output validation.")
 
+    openai_payload = generate_assistant_payload(normalized, workflow_title)
+    if openai_payload is not None:
+        try:
+            return AssistantResponse.model_validate(openai_payload)
+        except Exception:
+            pass
+
     return AssistantResponse(
         answer=(
             f"For {workflow_title}, start with a narrow proof of concept that proves the data "
@@ -92,6 +104,13 @@ def analyze_document(title: str, content: str) -> DocumentAnalysis:
     action_items = extract_action_items(content)
     risks = extract_risks(content)
     opportunities = extract_automation_opportunities(content)
+
+    openai_payload = generate_document_analysis_payload(title, content)
+    if openai_payload is not None:
+        try:
+            return DocumentAnalysis.model_validate(openai_payload)
+        except Exception:
+            pass
 
     return DocumentAnalysis(
         summary=build_summary(title, content, detected_systems),
@@ -184,6 +203,13 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
         "clear next action list."
     )
 
+    openai_payload = generate_prompt_evaluation_payload(prompt)
+    if openai_payload is not None:
+        try:
+            return PromptEvaluation.model_validate(openai_payload)
+        except Exception:
+            pass
+
     return PromptEvaluation(
         score=min(score, 100),
         strengths=strengths or ["The prompt is a workable starting point."],
@@ -204,4 +230,3 @@ def build_summary(title: str, content: str, detected_systems: list[str]) -> str:
 def split_sentences(content: str) -> list[str]:
     sentences = re.split(r"(?<=[.!?])\s+", content.strip())
     return [sentence.strip() for sentence in sentences if sentence.strip()]
-

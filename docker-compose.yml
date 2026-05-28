@@ -3,8 +3,10 @@ services:
     build:
       context: ./backend
     environment:
-      API_ENV: development
-      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+      API_ENV: ${API_ENV:-development}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
     ports:
       - "8000:8000"
 
@@ -17,4 +19,3 @@ services:
       - backend
     ports:
       - "8080:80"
-

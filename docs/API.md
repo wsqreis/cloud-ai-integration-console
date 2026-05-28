@@ -2,6 +2,8 @@
 
 Base URL: `http://localhost:8000`
 
+When `OPENAI_API_KEY` is set, the assistant, prompt evaluation, and document analysis endpoints can use the OpenAI SDK. Without it, they fall back to deterministic local logic.
+
 ## Health
 
 `GET /api/health`
@@ -69,4 +71,3 @@ Request:
 ```
 
 Response includes a score, strengths, gaps, and an improved prompt.
-

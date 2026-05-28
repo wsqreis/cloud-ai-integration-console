@@ -16,7 +16,7 @@ The application combines a React interface with a Python API to model the kinds 
 
 - React, TypeScript, and Vite for the responsive client.
 - Python and FastAPI for the REST API.
-- Deterministic AI-style services for prompt review and document triage.
+- OpenAI SDK support for live AI responses, with deterministic fallback when no key is set.
 - Docker Compose for running the full stack.
 
 ## Requirements
@@ -25,6 +25,11 @@ The application combines a React interface with a Python API to model the kinds 
 - Node.js 20 or newer.
 - Docker, when running the full stack with Compose.
 
+Optional:
+
+- `OPENAI_API_KEY` for live model calls.
+- `OPENAI_MODEL` to override the default model (`gpt-5.5`).
+
 ## Run With Docker
 
 ```bash
@@ -32,6 +37,19 @@ docker compose up --build
 ```
 
 Open `http://localhost:8080`.
+
+## Run The CLI
+
+Backend CLI:
+
+```bash
+cd backend
+python -m app.cli overview
+python -m app.cli prompt --prompt "Goal: reduce manual review. Use Oracle Fusion and return JSON."
+python -m app.cli assistant --workflow-id supplier-onboarding --prompt "Plan a supplier intake review flow."
+```
+
+If `OPENAI_API_KEY` is set, the CLI uses the OpenAI SDK; otherwise it falls back to the local deterministic services.
 
 ## Run For Development
 
