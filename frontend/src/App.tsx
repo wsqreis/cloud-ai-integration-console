@@ -9,6 +9,7 @@ import {
   Gauge,
   GitBranch,
   Loader2,
+  Clock3,
   MessageSquareText,
   Network,
   RefreshCw,
@@ -21,12 +22,14 @@ import {
   analyzeDocument,
   askAssistant,
   evaluatePrompt,
+  loadActivity,
   loadIntegrations,
   loadOverview,
   loadWorkflows,
 } from "./api";
 import architectureMap from "./assets/integration-map.svg";
 import type {
+  ActivityRecord,
   AssistantResponse,
   AutomationFlow,
   DocumentAnalysis,
@@ -52,6 +55,7 @@ export function App() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [workflows, setWorkflows] = useState<AutomationFlow[]>([]);
+  const [activityEntries, setActivityEntries] = useState<ActivityRecord[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("supplier-onboarding");
   const [prompt, setPrompt] = useState(samplePrompt);
   const [documentTitle, setDocumentTitle] = useState("Supplier intake notes");
@@ -62,11 +66,12 @@ export function App() {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   useEffect(() => {
-    void Promise.all([loadOverview(), loadIntegrations(), loadWorkflows()]).then(
-      ([overviewData, integrationData, workflowData]) => {
+    void Promise.all([loadOverview(), loadIntegrations(), loadWorkflows(), loadActivity()]).then(
+      ([overviewData, integrationData, workflowData, activityData]) => {
         setOverview(overviewData);
         setIntegrations(integrationData);
         setWorkflows(workflowData);
+        setActivityEntries(activityData);
         setSelectedWorkflowId(workflowData[0]?.id ?? "supplier-onboarding");
       },
     );
@@ -289,6 +294,30 @@ export function App() {
           </div>
         </section>
 
+        <section className="panel" id="activity">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Activity</p>
+              <h3>Recent persisted runs</h3>
+            </div>
+            <Clock3 size={22} aria-hidden="true" />
+          </div>
+          <div className="activity-feed">
+            {activityEntries.map((entry) => (
+              <article className="activity-row" key={entry.id}>
+                <div className="activity-main">
+                  <div className={`activity-kind ${entry.kind}`}>{entry.kind}</div>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <p>{entry.summary}</p>
+                  </div>
+                </div>
+                <small>{entry.created_at}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="two-column aligned-start">
           <form className="panel form-panel" id="assistant" onSubmit={handleAssistantSubmit}>
             <div className="section-heading">
@@ -437,4 +466,3 @@ function EmptyState({ text }: { text: string }) {
     </div>
   );
 }
-

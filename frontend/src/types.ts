@@ -61,3 +61,11 @@ export interface PromptEvaluation {
   improved_prompt: string;
 }
 
+export interface ActivityRecord {
+  id: number;
+  kind: "assistant" | "document" | "prompt";
+  title: string;
+  summary: string;
+  workflow_id?: string | null;
+  created_at: string;
+}

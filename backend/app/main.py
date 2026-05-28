@@ -9,6 +9,7 @@ from app.data import INTEGRATIONS, WORKFLOWS
 from app.models import (
     AssistantRequest,
     AssistantResponse,
+    ActivityRecord,
     AutomationFlow,
     DocumentAnalysis,
     DocumentRequest,
@@ -18,7 +19,7 @@ from app.models import (
     PromptEvaluationRequest,
 )
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
-from app.storage import initialize_storage
+from app.storage import initialize_storage, list_activity
 
 
 def create_app() -> FastAPI:
@@ -60,6 +61,10 @@ def create_app() -> FastAPI:
     @app.get("/api/workflows", response_model=list[AutomationFlow])
     def workflows() -> list[AutomationFlow]:
         return WORKFLOWS
+
+    @app.get("/api/activity", response_model=list[ActivityRecord])
+    def activity(limit: int = 20) -> list[ActivityRecord]:
+        return list_activity(limit=limit)
 
     @app.post("/api/assistant", response_model=AssistantResponse)
     def assistant(request: AssistantRequest) -> AssistantResponse:

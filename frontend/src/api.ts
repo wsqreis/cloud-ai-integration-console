@@ -1,4 +1,5 @@
 import {
+  activity,
   assistantResponse,
   documentAnalysis,
   integrations,
@@ -8,6 +9,7 @@ import {
 } from "./mockData";
 import type {
   AssistantResponse,
+  ActivityRecord,
   AutomationFlow,
   DocumentAnalysis,
   Integration,
@@ -53,6 +55,10 @@ export function loadWorkflows(): Promise<AutomationFlow[]> {
   return withFallback(() => request<AutomationFlow[]>("/api/workflows"), workflows);
 }
 
+export function loadActivity(): Promise<ActivityRecord[]> {
+  return withFallback(() => request<ActivityRecord[]>("/api/activity"), activity);
+}
+
 export function askAssistant(prompt: string, workflowId: string): Promise<AssistantResponse> {
   return withFallback(
     () =>
@@ -85,4 +91,3 @@ export function evaluatePrompt(prompt: string): Promise<PromptEvaluation> {
     promptEvaluation,
   );
 }
-

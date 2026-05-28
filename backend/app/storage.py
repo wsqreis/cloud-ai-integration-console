@@ -79,17 +79,32 @@ def record_activity(
         )
 
 
-def list_activity(limit: int = 20) -> list[ActivityRecord]:
+def list_activity(
+    limit: int = 20,
+    kind: ActivityKind | None = None,
+) -> list[ActivityRecord]:
     initialize_storage()
     with connect() as connection:
-        rows = connection.execute(
-            """
-            SELECT id, kind, title, summary, workflow_id, created_at
-            FROM activity_records
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+        if kind is None:
+            rows = connection.execute(
+                """
+                SELECT id, kind, title, summary, workflow_id, created_at
+                FROM activity_records
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT id, kind, title, summary, workflow_id, created_at
+                FROM activity_records
+                WHERE kind = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (kind, limit),
+            ).fetchall()
 
     return [ActivityRecord.model_validate(dict(row)) for row in rows]

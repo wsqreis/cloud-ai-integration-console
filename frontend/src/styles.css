@@ -369,6 +369,77 @@ main {
   gap: 10px;
 }
 
+.activity-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.activity-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.activity-main {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.activity-main strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.activity-main p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.activity-kind {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 8px;
+  color: #245a80;
+  background: var(--blue-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.activity-kind.assistant {
+  color: #13502e;
+  background: var(--mint);
+}
+
+.activity-kind.document {
+  color: #785007;
+  background: var(--amber);
+}
+
+.activity-kind.prompt {
+  color: #8a321f;
+  background: var(--coral-soft);
+}
+
+.activity-row small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .workflow-row {
   display: flex;
   gap: 12px;
@@ -629,4 +700,3 @@ select:focus {
     align-items: flex-start;
   }
 }
-

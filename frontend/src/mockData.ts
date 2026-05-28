@@ -1,4 +1,5 @@
 import type {
+  ActivityRecord,
   AssistantResponse,
   AutomationFlow,
   DocumentAnalysis,
@@ -150,3 +151,27 @@ export const promptEvaluation: PromptEvaluation = {
     "Given the business outcome, source system, target system, constraints, and sample data, produce a structured recommendation with assumptions, risks, validation steps, and a clear next action list.",
 };
 
+export const activity: ActivityRecord[] = [
+  {
+    id: 3,
+    kind: "prompt",
+    title: "Prompt evaluation",
+    summary: "Score 90/100",
+    created_at: "just now",
+  },
+  {
+    id: 2,
+    kind: "document",
+    title: "Supplier intake notes",
+    summary: "The note references Oracle Fusion and REST APIs.",
+    created_at: "5 minutes ago",
+  },
+  {
+    id: 1,
+    kind: "assistant",
+    title: "Supplier Onboarding Triage",
+    summary: "Start with a narrow proof of concept that proves the data path.",
+    workflow_id: "supplier-onboarding",
+    created_at: "8 minutes ago",
+  },
+];
