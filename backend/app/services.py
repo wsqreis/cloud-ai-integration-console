@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from app.data import CAPABILITY_MAP, INTEGRATIONS, METRICS, WORKFLOWS
+from app.catalog import CatalogAdapter, get_catalog_adapter
 from app.models import (
     AssistantResponse,
     DocumentAnalysis,
@@ -36,22 +36,14 @@ RISK_TERMS = {
 }
 
 
-def get_overview() -> Overview:
-    return Overview(
-        metrics=METRICS,
-        capability_map=CAPABILITY_MAP,
-        recommended_next_actions=[
-            "Validate degraded connector retry behavior.",
-            "Review AI-generated actions before publishing workflow changes.",
-            "Add customer-specific mappings after the prototype is approved.",
-        ],
-    )
+def get_overview(catalog: CatalogAdapter | None = None) -> Overview:
+    return (catalog or get_catalog_adapter()).get_overview()
 
 
 def find_workflow_title(workflow_id: str | None) -> str:
     if not workflow_id:
         return "a new integration prototype"
-    workflow = next((item for item in WORKFLOWS if item.id == workflow_id), None)
+    workflow = next((item for item in get_catalog_adapter().get_workflows() if item.id == workflow_id), None)
     return workflow.title if workflow else "a new integration prototype"
 
 

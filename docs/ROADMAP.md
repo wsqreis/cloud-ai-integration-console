@@ -9,6 +9,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - Done: OpenAI SDK integration and local CLI
 - Done: SQLite persistence for activity history
 - Done: Basic observability and request metrics
+- Done: Catalog adapter for seed data
 - Done: Activity history API and dashboard feed
 - Done: Integration tests for persistence and activity
 - Deferred: authentication and access control
@@ -22,7 +23,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 
 ## Phase 2 - Reliability
 
-- [ ] Replace mocks/static data with real integrations or clear adapters
+- [x] Replace mocks/static data with real integrations or clear adapters
 - [x] Implement structured logs, metrics, and tracing
 - [ ] Standardize backend errors, retries, and timeouts
 - [x] Cover critical flows with integration tests
@@ -53,4 +54,5 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - The active MVP focus is supplier onboarding triage from supplier intake notes into Oracle Fusion Cloud.
 - The MVP scope is intentionally frozen around that path so we can avoid scope creep.
 - Request IDs and basic metrics are now available through the API for lightweight observability.
+- The active catalog comes from `backend/data/catalog.json` through an adapter, which makes future integrations easier to swap in.
 - The checklist should stay updated as work lands so it remains the source of truth for the project plan.

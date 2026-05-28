@@ -6,7 +6,6 @@ import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.data import INTEGRATIONS, WORKFLOWS
 from app.models import (
     AssistantRequest,
     AssistantResponse,
@@ -19,6 +18,7 @@ from app.models import (
     PromptEvaluation,
     PromptEvaluationRequest,
 )
+from app.catalog import get_catalog_adapter
 from app.observability import (
     initialize_observability_state,
     observability_middleware_factory,
@@ -29,6 +29,7 @@ from app.storage import initialize_storage, list_activity
 
 
 def create_app() -> FastAPI:
+    catalog = get_catalog_adapter()
     app = FastAPI(
         title="Cloud AI Integration Console API",
         version="0.1.0",
@@ -74,15 +75,15 @@ def create_app() -> FastAPI:
 
     @app.get("/api/overview", response_model=Overview)
     def overview() -> Overview:
-        return get_overview()
+        return get_overview(catalog)
 
     @app.get("/api/integrations", response_model=list[Integration])
     def integrations() -> list[Integration]:
-        return INTEGRATIONS
+        return catalog.get_integrations()
 
     @app.get("/api/workflows", response_model=list[AutomationFlow])
     def workflows() -> list[AutomationFlow]:
-        return WORKFLOWS
+        return catalog.get_workflows()
 
     @app.get("/api/activity", response_model=list[ActivityRecord])
     def activity(limit: int = 20) -> list[ActivityRecord]:

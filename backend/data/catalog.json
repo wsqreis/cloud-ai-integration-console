@@ -1,0 +1,66 @@
+{
+  "integrations": [
+    {
+      "id": "supplier-intake",
+      "name": "Supplier Intake Notes",
+      "category": "Source System",
+      "status": "healthy",
+      "latency_ms": 124,
+      "last_sync": "2 minutes ago",
+      "description": "Internal intake notes and document payloads used to start supplier review.",
+      "capabilities": ["document capture", "field extraction", "review handoff"]
+    },
+    {
+      "id": "oracle-fusion",
+      "name": "Oracle Fusion Cloud",
+      "category": "Destination System",
+      "status": "healthy",
+      "latency_ms": 182,
+      "last_sync": "8 minutes ago",
+      "description": "Target ERP system for drafting supplier records after human review.",
+      "capabilities": ["REST API", "OAuth", "supplier draft", "data validation"]
+    },
+    {
+      "id": "oci-genai",
+      "name": "OCI Generative AI",
+      "category": "AI Services",
+      "status": "healthy",
+      "latency_ms": 260,
+      "last_sync": "live",
+      "description": "Prompt endpoint used for summarization, classification, and guided planning.",
+      "capabilities": ["LLM prompts", "document summaries", "structured extraction"]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "supplier-onboarding",
+      "title": "Supplier Onboarding Triage",
+      "summary": "Reviews supplier intake notes, validates missing fields, and drafts an Oracle Fusion supplier record.",
+      "business_value": "Cuts manual review time before supplier records reach the finance queue.",
+      "systems": ["Supplier Intake Notes", "OCI Generative AI", "Oracle Fusion Cloud"],
+      "steps": [
+        { "title": "Capture intake payload", "owner": "API", "status": "ready" },
+        { "title": "Extract missing fields", "owner": "AI service", "status": "ready" },
+        { "title": "Route exceptions", "owner": "Workflow engine", "status": "review" },
+        { "title": "Create supplier draft", "owner": "ERP connector", "status": "planned" }
+      ]
+    }
+  ],
+  "metrics": [
+    { "label": "Active connectors", "value": "3", "trend": "1 source, 1 destination, 1 AI service" },
+    { "label": "Prototype flows", "value": "1", "trend": "focused on supplier onboarding" },
+    { "label": "Average API latency", "value": "294 ms", "trend": "-18 ms this week" },
+    { "label": "AI prompt quality", "value": "86%", "trend": "+9% after refinement" }
+  ],
+  "capability_map": {
+    "Supplier onboarding": ["intake triage", "missing field detection", "Oracle Fusion draft"],
+    "AI enablement": ["prompt evaluation", "document analysis", "structured recommendations"],
+    "Operator workflow": ["responsive dashboard", "guided review", "activity history"],
+    "Delivery support": ["setup guidance", "review checklists", "prototype documentation"]
+  },
+  "recommended_next_actions": [
+    "Validate degraded connector retry behavior.",
+    "Review AI-generated actions before publishing workflow changes.",
+    "Add customer-specific mappings after the prototype is approved."
+  ]
+}

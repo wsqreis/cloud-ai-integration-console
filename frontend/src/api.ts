@@ -6,7 +6,7 @@ import {
   overview,
   promptEvaluation,
   workflows,
-} from "./mockData";
+} from "./seedData";
 import type {
   AssistantResponse,
   ActivityRecord,
