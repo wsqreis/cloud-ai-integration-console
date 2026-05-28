@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,11 @@ from app.models import (
     PromptEvaluation,
     PromptEvaluationRequest,
 )
+from app.observability import (
+    initialize_observability_state,
+    observability_middleware_factory,
+    setup_logging,
+)
 from app.services import analyze_document, evaluate_prompt, get_overview, plan_assistant_reply
 from app.storage import initialize_storage, list_activity
 
@@ -29,6 +35,7 @@ def create_app() -> FastAPI:
         description="REST API for cloud integration, AI workflow planning, and document triage.",
     )
 
+    setup_logging()
     allowed_origins = [
         origin.strip()
         for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
@@ -41,6 +48,12 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    initialize_observability_state(app)
+    request_logger = observability_middleware_factory(app)
+
+    @app.middleware("http")
+    async def log_requests(request, call_next):
+        return await request_logger(request, call_next)
 
     @app.on_event("startup")
     def startup() -> None:
@@ -49,6 +62,15 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "environment": os.getenv("API_ENV", "development")}
+
+    @app.get("/api/metrics")
+    def metrics() -> dict[str, float | int]:
+        started_at = app.state.metrics["started_at"]
+        return {
+            "requests_total": app.state.metrics["requests_total"],
+            "requests_failed": app.state.metrics["requests_failed"],
+            "uptime_seconds": round(time.time() - started_at, 2),
+        }
 
     @app.get("/api/overview", response_model=Overview)
     def overview() -> Overview:

@@ -15,6 +15,7 @@ The current MVP focus is supplier onboarding triage from supplier intake notes i
 
 - FastAPI exposes REST endpoints for integrations, workflows, AI planning, prompt scoring, and document analysis.
 - Service logic uses the OpenAI SDK when credentials are present and falls back to deterministic behavior otherwise.
+- Lightweight observability adds request IDs, duration headers, request counters, and a metrics endpoint.
 - The AI-style responses model practical LLM concerns: assumptions, confidence, structured outputs, and review checkpoints.
 
 ## Integration Model

@@ -47,3 +47,19 @@ def test_activity_endpoint_returns_recent_records(monkeypatch, tmp_path) -> None
     assert activity_items
     assert activity_items[0]["kind"] == "assistant"
     assert activity_items[0]["title"] == "Supplier Onboarding Triage"
+
+
+def test_metrics_endpoint_tracks_requests(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "cloud-ai-console.sqlite3"
+    monkeypatch.setenv("APP_DB_PATH", str(database_path))
+
+    app = create_app()
+    with TestClient(app) as client:
+        metrics_before = client.get("/api/metrics").json()
+        response = client.get("/api/health")
+        metrics_after = client.get("/api/metrics").json()
+
+    assert metrics_before["requests_total"] >= 1
+    assert metrics_after["requests_total"] >= metrics_before["requests_total"]
+    assert response.headers["x-request-id"]
+    assert response.headers["x-response-time-ms"]

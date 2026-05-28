@@ -10,6 +10,12 @@ When `OPENAI_API_KEY` is set, the assistant, prompt evaluation, and document ana
 
 Returns service status and active environment.
 
+## Metrics
+
+`GET /api/metrics`
+
+Returns basic request counters and uptime for lightweight observability.
+
 ## Overview
 
 `GET /api/overview`

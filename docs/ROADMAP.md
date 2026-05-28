@@ -8,6 +8,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - Done: MVP scope frozen
 - Done: OpenAI SDK integration and local CLI
 - Done: SQLite persistence for activity history
+- Done: Basic observability and request metrics
 - Done: Activity history API and dashboard feed
 - Done: Integration tests for persistence and activity
 - Deferred: authentication and access control
@@ -22,7 +23,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 ## Phase 2 - Reliability
 
 - [ ] Replace mocks/static data with real integrations or clear adapters
-- [ ] Implement structured logs, metrics, and tracing
+- [x] Implement structured logs, metrics, and tracing
 - [ ] Standardize backend errors, retries, and timeouts
 - [x] Cover critical flows with integration tests
 
@@ -51,5 +52,5 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - Authentication is intentionally deferred for now so we can keep validating value in a closed internal environment.
 - The active MVP focus is supplier onboarding triage from supplier intake notes into Oracle Fusion Cloud.
 - The MVP scope is intentionally frozen around that path so we can avoid scope creep.
+- Request IDs and basic metrics are now available through the API for lightweight observability.
 - The checklist should stay updated as work lands so it remains the source of truth for the project plan.
-
