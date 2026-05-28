@@ -1,5 +1,6 @@
 import {
   activity,
+  auditTrail,
   assistantResponse,
   documentAnalysis,
   integrations,
@@ -12,6 +13,7 @@ import {
 import type {
   AssistantResponse,
   ActivityRecord,
+  AuditTrailRecord,
   AutomationFlow,
   DocumentAnalysis,
   Integration,
@@ -63,6 +65,10 @@ export function loadActivity(): Promise<ActivityRecord[]> {
   return withFallback(() => request<ActivityRecord[]>("/api/activity"), activity);
 }
 
+export function loadAuditTrail(): Promise<AuditTrailRecord[]> {
+  return withFallback(() => request<AuditTrailRecord[]>("/api/audit-trail"), auditTrail);
+}
+
 export function loadPromptHistory(): Promise<PromptHistoryRecord[]> {
   return withFallback(() => request<PromptHistoryRecord[]>("/api/prompt-history"), promptHistory);
 }
@@ -93,6 +99,13 @@ export function rejectReview(reviewId: number, reviewer = "local-operator"): Pro
   return request<ReviewRecord>(`/api/reviews/${reviewId}/reject`, {
     method: "POST",
     body: JSON.stringify({ reviewer }),
+  });
+}
+
+export function publishReview(reviewId: number, publisher = "local-operator"): Promise<ReviewRecord> {
+  return request<ReviewRecord>(`/api/reviews/${reviewId}/publish`, {
+    method: "POST",
+    body: JSON.stringify({ publisher }),
   });
 }
 

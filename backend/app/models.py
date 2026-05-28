@@ -56,7 +56,7 @@ class AssistantResponse(BaseModel):
     quality_checks: list[str]
     confidence: Literal["low", "medium", "high"]
     review_id: int | None = None
-    review_status: Literal["pending", "approved", "rejected"] = "pending"
+    review_status: Literal["pending", "approved", "rejected", "published"] = "pending"
 
 
 class DocumentRequest(BaseModel):
@@ -95,8 +95,24 @@ class PromptVersionRecord(BaseModel):
     created_at: str
 
 
+class AuditTrailRecord(BaseModel):
+    id: int
+    actor: str
+    action: str
+    subject_type: str
+    subject_id: str
+    summary: str
+    details: dict[str, Any]
+    created_at: str
+
+
 class ReviewActionRequest(BaseModel):
     reviewer: str = Field(default="local-operator", min_length=2, max_length=80)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class PublishActionRequest(BaseModel):
+    publisher: str = Field(default="local-operator", min_length=2, max_length=80)
     note: str | None = Field(default=None, max_length=500)
 
 
@@ -105,9 +121,12 @@ class ReviewRecord(BaseModel):
     workflow_id: str | None = None
     workflow_title: str
     prompt: str
-    status: Literal["pending", "approved", "rejected"]
+    status: Literal["pending", "approved", "rejected", "published"]
     reviewer: str | None = None
     decision_note: str | None = None
+    published_by: str | None = None
+    published_note: str | None = None
+    published_at: str | None = None
     response: AssistantResponse
     created_at: str
     reviewed_at: str | None = None
@@ -115,7 +134,7 @@ class ReviewRecord(BaseModel):
 
 class ActivityRecord(BaseModel):
     id: int
-    kind: Literal["assistant", "document", "prompt", "review"]
+    kind: Literal["assistant", "document", "prompt", "review", "audit"]
     title: str
     summary: str
     workflow_id: str | None = None

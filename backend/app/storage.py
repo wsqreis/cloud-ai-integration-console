@@ -7,10 +7,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from app.models import ActivityRecord, AssistantResponse, PromptVersionRecord, ReviewRecord
+from app.models import (
+    ActivityRecord,
+    AssistantResponse,
+    AuditTrailRecord,
+    PromptVersionRecord,
+    ReviewRecord,
+)
 
 
-ActivityKind = Literal["assistant", "document", "prompt", "review"]
+ActivityKind = Literal["assistant", "document", "prompt", "review", "audit"]
 PromptVersionKind = Literal["assistant", "document", "prompt"]
 
 
@@ -50,8 +56,11 @@ def initialize_storage() -> None:
                 status TEXT NOT NULL DEFAULT 'pending',
                 reviewer TEXT,
                 decision_note TEXT,
+                published_by TEXT,
+                published_note TEXT,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                reviewed_at TEXT
+                reviewed_at TEXT,
+                published_at TEXT
             )
             """
         )
@@ -70,6 +79,23 @@ def initialize_storage() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL,
+                subject_type TEXT NOT NULL,
+                subject_id TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                details_json TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        _ensure_column(connection, "review_records", "published_by", "TEXT")
+        _ensure_column(connection, "review_records", "published_note", "TEXT")
+        _ensure_column(connection, "review_records", "published_at", "TEXT")
 
 
 @contextmanager
@@ -83,6 +109,13 @@ def connect() -> Iterator[sqlite3.Connection]:
         connection.commit()
     finally:
         connection.close()
+
+
+def _ensure_column(connection: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
+    columns = connection.execute(f"PRAGMA table_info({table})").fetchall()
+    if any(existing_column["name"] == column for existing_column in columns):
+        return
+    connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
 
 
 def record_activity(
@@ -142,6 +175,73 @@ def list_activity(
     return [ActivityRecord.model_validate(dict(row)) for row in rows]
 
 
+def record_audit_event(
+    actor: str,
+    action: str,
+    subject_type: str,
+    subject_id: str,
+    summary: str,
+    details: dict[str, Any],
+) -> AuditTrailRecord:
+    initialize_storage()
+    with connect() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO audit_events (actor, action, subject_type, subject_id, summary, details_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                actor,
+                action,
+                subject_type,
+                subject_id,
+                summary,
+                json.dumps(details, ensure_ascii=False),
+            ),
+        )
+        row = connection.execute(
+            """
+            SELECT id, actor, action, subject_type, subject_id, summary, details_json, created_at
+            FROM audit_events
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+    return _row_to_audit_event(row)
+
+
+def list_audit_events(
+    limit: int = 20,
+    action: str | None = None,
+) -> list[AuditTrailRecord]:
+    initialize_storage()
+    with connect() as connection:
+        if action is None:
+            rows = connection.execute(
+                """
+                SELECT id, actor, action, subject_type, subject_id, summary, details_json, created_at
+                FROM audit_events
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT id, actor, action, subject_type, subject_id, summary, details_json, created_at
+                FROM audit_events
+                WHERE action = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (action, limit),
+            ).fetchall()
+
+    return [_row_to_audit_event(row) for row in rows]
+
+
 def record_review(
     workflow_id: str | None,
     workflow_title: str,
@@ -165,7 +265,8 @@ def record_review(
         row = connection.execute(
             """
             SELECT id, workflow_id, workflow_title, prompt, response_json, status,
-                   reviewer, decision_note, created_at, reviewed_at
+                   reviewer, decision_note, published_by, published_note, created_at, reviewed_at,
+                   published_at
             FROM review_records
             WHERE id = ?
             """,
@@ -182,7 +283,8 @@ def list_reviews(status: str | None = None) -> list[ReviewRecord]:
             rows = connection.execute(
                 """
                 SELECT id, workflow_id, workflow_title, prompt, response_json, status,
-                       reviewer, decision_note, created_at, reviewed_at
+                       reviewer, decision_note, published_by, published_note, created_at,
+                       reviewed_at, published_at
                 FROM review_records
                 ORDER BY id DESC
                 """
@@ -191,7 +293,8 @@ def list_reviews(status: str | None = None) -> list[ReviewRecord]:
             rows = connection.execute(
                 """
                 SELECT id, workflow_id, workflow_title, prompt, response_json, status,
-                       reviewer, decision_note, created_at, reviewed_at
+                       reviewer, decision_note, published_by, published_note, created_at,
+                       reviewed_at, published_at
                 FROM review_records
                 WHERE status = ?
                 ORDER BY id DESC
@@ -221,7 +324,42 @@ def update_review(
         row = connection.execute(
             """
             SELECT id, workflow_id, workflow_title, prompt, response_json, status,
-                   reviewer, decision_note, created_at, reviewed_at
+                   reviewer, decision_note, published_by, published_note, created_at, reviewed_at,
+                   published_at
+            FROM review_records
+            WHERE id = ?
+            """,
+            (review_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+    return _row_to_review_record(row)
+
+
+def publish_review(
+    review_id: int,
+    publisher: str,
+    publish_note: str | None = None,
+) -> ReviewRecord | None:
+    initialize_storage()
+    with connect() as connection:
+        connection.execute(
+            """
+            UPDATE review_records
+            SET status = 'published',
+                published_by = ?,
+                published_note = ?,
+                published_at = datetime('now')
+            WHERE id = ?
+            """,
+            (publisher, publish_note, review_id),
+        )
+        row = connection.execute(
+            """
+            SELECT id, workflow_id, workflow_title, prompt, response_json, status,
+                   reviewer, decision_note, published_by, published_note, created_at, reviewed_at,
+                   published_at
             FROM review_records
             WHERE id = ?
             """,
@@ -247,9 +385,27 @@ def _row_to_review_record(row: sqlite3.Row) -> ReviewRecord:
             "status": row["status"],
             "reviewer": row["reviewer"],
             "decision_note": row["decision_note"],
+            "published_by": row["published_by"],
+            "published_note": row["published_note"],
+            "published_at": row["published_at"],
             "response": response.model_dump(),
             "created_at": row["created_at"],
             "reviewed_at": row["reviewed_at"],
+        }
+    )
+
+
+def _row_to_audit_event(row: sqlite3.Row) -> AuditTrailRecord:
+    return AuditTrailRecord.model_validate(
+        {
+            "id": row["id"],
+            "actor": row["actor"],
+            "action": row["action"],
+            "subject_type": row["subject_type"],
+            "subject_id": row["subject_id"],
+            "summary": row["summary"],
+            "details": json.loads(row["details_json"]),
+            "created_at": row["created_at"],
         }
     )
 

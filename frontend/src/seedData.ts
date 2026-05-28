@@ -7,6 +7,7 @@ import type {
   Overview,
   PromptEvaluation,
   PromptHistoryRecord,
+  AuditTrailRecord,
   ReviewRecord,
 } from "./types";
 
@@ -134,6 +135,51 @@ export const reviews: ReviewRecord[] = [
   },
 ];
 
+export const auditTrail: AuditTrailRecord[] = [
+  {
+    id: 5,
+    actor: "finance-ops",
+    action: "review_published",
+    subject_type: "review",
+    subject_id: "4",
+    summary: "Published Supplier Onboarding Triage.",
+    details: {
+      review_id: 4,
+      workflow_id: "supplier-onboarding",
+      note: "Ready for downstream handoff",
+    },
+    created_at: "just now",
+  },
+  {
+    id: 4,
+    actor: "finance-ops",
+    action: "review_approved",
+    subject_type: "review",
+    subject_id: "4",
+    summary: "Approved Supplier Onboarding Triage.",
+    details: {
+      review_id: 4,
+      workflow_id: "supplier-onboarding",
+      note: "Approved for pilot",
+    },
+    created_at: "5 minutes ago",
+  },
+  {
+    id: 3,
+    actor: "local-operator",
+    action: "assistant_requested",
+    subject_type: "workflow",
+    subject_id: "supplier-onboarding",
+    summary: "Requested AI review for Supplier Onboarding Triage.",
+    details: {
+      workflow_id: "supplier-onboarding",
+      review_id: 4,
+      status: "pending",
+    },
+    created_at: "8 minutes ago",
+  },
+];
+
 export const promptHistory: PromptHistoryRecord[] = [
   {
     id: 3,
@@ -171,6 +217,14 @@ export const promptHistory: PromptHistoryRecord[] = [
 ];
 
 export const activity: ActivityRecord[] = [
+  {
+    id: 5,
+    kind: "audit",
+    title: "Review published: Supplier Onboarding Triage",
+    summary: "Published by finance-ops.",
+    workflow_id: "supplier-onboarding",
+    created_at: "just now",
+  },
   {
     id: 4,
     kind: "review",

@@ -14,6 +14,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 - Done: Integration tests for persistence and activity
 - Done: Reviewable AI planner flow with approvals
 - Done: Versioned prompt and response history
+- Done: Audit trail for requests, approvals, and publication
 - Deferred: authentication and access control
 
 ## Phase 1 - Base of product
@@ -34,7 +35,7 @@ This is the live plan for moving the console from prototype to a client-pilot-re
 
 - [x] Turn the AI planner into a useful flow: suggestion, human review, approval
 - [x] Keep history of responses and prompt versions
-- [ ] Add audit trail: who asked, who approved, what was published
+- [x] Add audit trail: who asked, who approved, what was published
 - [ ] Add operational screens: status, failures, pending items, review queue
 
 ## Phase 4 - Ready to Pilot

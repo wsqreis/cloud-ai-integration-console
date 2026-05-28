@@ -456,6 +456,11 @@ main {
   background: #e7ddf6;
 }
 
+.activity-kind.audit {
+  color: #8a4b15;
+  background: #fbe8d0;
+}
+
 .activity-row small {
   color: var(--muted);
   white-space: nowrap;
@@ -485,6 +490,20 @@ main {
 }
 
 .history-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-quiet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.audit-card {
   display: grid;
   gap: 12px;
   padding: 16px;

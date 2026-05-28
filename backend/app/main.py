@@ -15,6 +15,7 @@ from app.models import (
     AssistantRequest,
     AssistantResponse,
     ActivityRecord,
+    AuditTrailRecord,
     AutomationFlow,
     DocumentAnalysis,
     DocumentRequest,
@@ -23,6 +24,7 @@ from app.models import (
     PromptEvaluation,
     PromptEvaluationRequest,
     PromptVersionRecord,
+    PublishActionRequest,
     ReviewActionRequest,
     ReviewRecord,
 )
@@ -36,9 +38,12 @@ from app.services import analyze_document, evaluate_prompt, get_overview, plan_a
 from app.storage import (
     initialize_storage,
     list_activity,
+    list_audit_events,
     list_prompt_versions,
     list_reviews,
+    record_audit_event,
     record_activity,
+    publish_review,
     update_review,
 )
 
@@ -150,6 +155,10 @@ def create_app() -> FastAPI:
     def activity(limit: int = 20) -> list[ActivityRecord]:
         return list_activity(limit=limit)
 
+    @app.get("/api/audit-trail", response_model=list[AuditTrailRecord])
+    def audit_trail(limit: int = 20) -> list[AuditTrailRecord]:
+        return list_audit_events(limit=limit)
+
     @app.get("/api/prompt-history", response_model=list[PromptVersionRecord])
     def prompt_history(
         kind: str | None = None,
@@ -167,10 +176,10 @@ def create_app() -> FastAPI:
 
     @app.get("/api/reviews", response_model=list[ReviewRecord])
     def reviews(status: str | None = None) -> list[ReviewRecord]:
-        if status is not None and status not in {"pending", "approved", "rejected"}:
+        if status is not None and status not in {"pending", "approved", "rejected", "published"}:
             raise AppError(
                 code="invalid_review_status",
-                message="Review status must be pending, approved, or rejected.",
+                message="Review status must be pending, approved, rejected, or published.",
                 status_code=400,
                 details={"status": status},
             )
@@ -199,6 +208,14 @@ def create_app() -> FastAPI:
             output_payload=review.model_dump(),
             workflow_id=review.workflow_id,
         )
+        record_audit_event(
+            actor=request.reviewer,
+            action="review_approved",
+            subject_type="review",
+            subject_id=str(review_id),
+            summary=f"Approved {review.workflow_title}.",
+            details={"review_id": review_id, "workflow_id": review.workflow_id, "note": request.note},
+        )
         return review
 
     @app.post("/api/reviews/{review_id}/reject", response_model=ReviewRecord)
@@ -223,6 +240,62 @@ def create_app() -> FastAPI:
             input_payload={"review_id": review_id, "reviewer": request.reviewer, "note": request.note},
             output_payload=review.model_dump(),
             workflow_id=review.workflow_id,
+        )
+        record_audit_event(
+            actor=request.reviewer,
+            action="review_rejected",
+            subject_type="review",
+            subject_id=str(review_id),
+            summary=f"Rejected {review.workflow_title}.",
+            details={"review_id": review_id, "workflow_id": review.workflow_id, "note": request.note},
+        )
+        return review
+
+    @app.post("/api/reviews/{review_id}/publish", response_model=ReviewRecord)
+    def publish_review_route(review_id: int, request: PublishActionRequest) -> ReviewRecord:
+        existing_review = next((item for item in list_reviews() if item.id == review_id), None)
+        if existing_review is None:
+            raise AppError(
+                code="review_not_found",
+                message="Review item not found.",
+                status_code=404,
+                details={"review_id": review_id},
+            )
+        if existing_review.status != "approved":
+            raise AppError(
+                code="review_not_publishable",
+                message="Only approved review items can be published.",
+                status_code=409,
+                details={"review_id": review_id, "status": existing_review.status},
+            )
+
+        review = publish_review(
+            review_id=review_id,
+            publisher=request.publisher,
+            publish_note=request.note,
+        )
+        if review is None:
+            raise AppError(
+                code="review_not_found",
+                message="Review item not found.",
+                status_code=404,
+                details={"review_id": review_id},
+            )
+        record_activity(
+            kind="audit",
+            title=f"Review published: {review.workflow_title}",
+            summary=f"Published by {request.publisher}.",
+            input_payload={"review_id": review_id, "publisher": request.publisher, "note": request.note},
+            output_payload=review.model_dump(),
+            workflow_id=review.workflow_id,
+        )
+        record_audit_event(
+            actor=request.publisher,
+            action="review_published",
+            subject_type="review",
+            subject_id=str(review_id),
+            summary=f"Published {review.workflow_title}.",
+            details={"review_id": review_id, "workflow_id": review.workflow_id, "note": request.note},
         )
         return review
 

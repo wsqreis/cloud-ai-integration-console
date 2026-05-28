@@ -75,14 +75,28 @@ export interface PromptHistoryRecord {
   created_at: string;
 }
 
+export interface AuditTrailRecord {
+  id: number;
+  actor: string;
+  action: string;
+  subject_type: string;
+  subject_id: string;
+  summary: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface ReviewRecord {
   id: number;
   workflow_id?: string | null;
   workflow_title: string;
   prompt: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "published";
   reviewer?: string | null;
   decision_note?: string | null;
+  published_by?: string | null;
+  published_note?: string | null;
+  published_at?: string | null;
   response: AssistantResponse;
   created_at: string;
   reviewed_at?: string | null;
@@ -90,7 +104,7 @@ export interface ReviewRecord {
 
 export interface ActivityRecord {
   id: number;
-  kind: "assistant" | "document" | "prompt" | "review";
+  kind: "assistant" | "document" | "prompt" | "review" | "audit";
   title: string;
   summary: string;
   workflow_id?: string | null;

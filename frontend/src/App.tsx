@@ -23,17 +23,20 @@ import {
   analyzeDocument,
   askAssistant,
   evaluatePrompt,
+  loadAuditTrail,
   loadActivity,
   loadIntegrations,
   loadPromptHistory,
   loadOverview,
   loadReviews,
   loadWorkflows,
+  publishReview,
   rejectReview,
 } from "./api";
 import architectureMap from "./assets/integration-map.svg";
 import type {
   ActivityRecord,
+  AuditTrailRecord,
   AssistantResponse,
   AutomationFlow,
   DocumentAnalysis,
@@ -62,6 +65,7 @@ export function App() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [workflows, setWorkflows] = useState<AutomationFlow[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityRecord[]>([]);
+  const [auditTrailEntries, setAuditTrailEntries] = useState<AuditTrailRecord[]>([]);
   const [promptHistoryEntries, setPromptHistoryEntries] = useState<PromptHistoryRecord[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewRecord[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("supplier-onboarding");
@@ -79,13 +83,15 @@ export function App() {
       loadIntegrations(),
       loadWorkflows(),
       loadActivity(),
+      loadAuditTrail(),
       loadPromptHistory(),
       loadReviews(),
-    ]).then(([overviewData, integrationData, workflowData, activityData, historyData, reviewData]) => {
+    ]).then(([overviewData, integrationData, workflowData, activityData, auditData, historyData, reviewData]) => {
         setOverview(overviewData);
         setIntegrations(integrationData);
         setWorkflows(workflowData);
         setActivityEntries(activityData);
+        setAuditTrailEntries(auditData);
         setPromptHistoryEntries(historyData);
         setReviewQueue(reviewData);
         setSelectedWorkflowId(workflowData[0]?.id ?? "supplier-onboarding");
@@ -94,13 +100,15 @@ export function App() {
   }, []);
 
   async function refreshDashboardData() {
-    const [reviewData, activityData, historyData] = await Promise.all([
+    const [reviewData, activityData, auditData, historyData] = await Promise.all([
       loadReviews(),
       loadActivity(),
+      loadAuditTrail(),
       loadPromptHistory(),
     ]);
     setReviewQueue(reviewData);
     setActivityEntries(activityData);
+    setAuditTrailEntries(auditData);
     setPromptHistoryEntries(historyData);
   }
 
@@ -135,13 +143,15 @@ export function App() {
     setLoadingAction(null);
   }
 
-  async function handleReviewDecision(reviewId: number, decision: "approve" | "reject") {
+  async function handleReviewDecision(reviewId: number, decision: "approve" | "reject" | "publish") {
     setLoadingAction(`${decision}-${reviewId}`);
     try {
       if (decision === "approve") {
         await approveReview(reviewId);
-      } else {
+      } else if (decision === "reject") {
         await rejectReview(reviewId);
+      } else {
+        await publishReview(reviewId);
       }
       await refreshDashboardData();
     } finally {
@@ -486,17 +496,63 @@ export function App() {
                         Approve
                       </button>
                     </div>
+                  ) : review.status === "approved" ? (
+                    <div className="form-actions">
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => handleReviewDecision(review.id, "publish")}
+                      >
+                        {loadingAction === `publish-${review.id}` ? (
+                          <Loader2 className="spin" size={18} aria-hidden="true" />
+                        ) : null}
+                        Publish
+                      </button>
+                    </div>
+                  ) : review.status === "published" ? (
+                    <small>Published by {review.published_by ?? "local-operator"}.</small>
                   ) : (
                     <small>
-                      {review.status === "approved"
-                        ? "Ready to publish downstream."
-                        : "Returned for revision."}
+                      Returned for revision.
                     </small>
                   )}
                 </div>
               </article>
             ))}
             {reviewQueue.length === 0 ? <EmptyState text="Send a prompt to queue a review item." /> : null}
+          </div>
+        </section>
+
+        <section className="panel" id="audit">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Audit trail</p>
+              <h3>Who asked, approved, and published</h3>
+            </div>
+            <ShieldCheck size={22} aria-hidden="true" />
+          </div>
+          <div className="audit-grid">
+            {auditTrailEntries.map((entry) => (
+              <article className="audit-card" key={entry.id}>
+                <div className="connector-topline">
+                  <div>
+                    <h4>{entry.action}</h4>
+                    <p>
+                      {entry.actor} - {entry.subject_type} #{entry.subject_id}
+                    </p>
+                  </div>
+                  <span className="status-pill planned">{entry.created_at}</span>
+                </div>
+                <p className="muted-copy">{entry.summary}</p>
+                <div className="tag-row">
+                  {Object.entries(entry.details).map(([key, value]) => (
+                    <span key={key}>
+                      {key}: {typeof value === "string" ? value : JSON.stringify(value)}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -514,7 +570,7 @@ export function App() {
                 <div className="connector-topline">
                   <div>
                     <h4>
-                      {entry.title} · v{entry.version}
+                      {entry.title} - v{entry.version}
                     </h4>
                     <p>{entry.kind}</p>
                   </div>

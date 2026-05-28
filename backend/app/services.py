@@ -14,7 +14,13 @@ from app.openai_service import (
     generate_document_analysis_payload,
     generate_prompt_evaluation_payload,
 )
-from app.storage import initialize_storage, record_activity, record_prompt_version, record_review
+from app.storage import (
+    initialize_storage,
+    record_activity,
+    record_audit_event,
+    record_prompt_version,
+    record_review,
+)
 
 
 SYSTEM_KEYWORDS = {
@@ -133,6 +139,19 @@ def persist_assistant_review(
         output_payload=review_record.model_dump(),
         workflow_id=workflow_id,
     )
+    record_audit_event(
+        actor="local-operator",
+        action="assistant_requested",
+        subject_type="workflow",
+        subject_id=workflow_id or workflow_title,
+        summary=f"Requested AI review for {workflow_title}.",
+        details={
+            "workflow_id": workflow_id,
+            "workflow_title": workflow_title,
+            "review_id": review_record.id,
+            "status": "pending",
+        },
+    )
     return reviewed_result
 
 
@@ -178,6 +197,14 @@ def analyze_document(title: str, content: str) -> DocumentAnalysis:
         prompt=content,
         response_summary=result.summary,
         response_payload=result.model_dump(),
+    )
+    record_audit_event(
+        actor="local-operator",
+        action="document_analyzed",
+        subject_type="document",
+        subject_id=title,
+        summary=f"Analyzed document: {title}.",
+        details={"title": title, "detected_systems": result.detected_systems},
     )
     return result
 
@@ -283,6 +310,14 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
                 response_summary=f"Score {result.score}/100",
                 response_payload=result.model_dump(),
             )
+            record_audit_event(
+                actor="local-operator",
+                action="prompt_evaluated",
+                subject_type="prompt",
+                subject_id="prompt-evaluation",
+                summary=f"Evaluated prompt with score {result.score}/100.",
+                details={"score": result.score, "gaps": result.gaps, "strengths": result.strengths},
+            )
             return result
         except Exception:
             pass
@@ -306,6 +341,14 @@ def evaluate_prompt(prompt: str) -> PromptEvaluation:
         prompt=prompt,
         response_summary=f"Score {result.score}/100",
         response_payload=result.model_dump(),
+    )
+    record_audit_event(
+        actor="local-operator",
+        action="prompt_evaluated",
+        subject_type="prompt",
+        subject_id="prompt-evaluation",
+        summary=f"Evaluated prompt with score {result.score}/100.",
+        details={"score": result.score, "gaps": result.gaps, "strengths": result.strengths},
     )
     return result
 

@@ -10,6 +10,8 @@ The AI planner now creates a review item that can be approved or rejected throug
 
 Every assistant, prompt evaluation, and document triage run is also written to the prompt history log with a version number.
 
+Review approvals, rejections, and publications are written to the audit trail so you can see who asked, who approved, and what was published.
+
 Errors return a consistent JSON shape:
 
 ```json
@@ -119,3 +121,13 @@ Marks a review item as approved.
 `POST /api/reviews/{review_id}/reject`
 
 Marks a review item as rejected.
+
+`POST /api/reviews/{review_id}/publish`
+
+Marks an approved review item as published.
+
+## Audit Trail
+
+`GET /api/audit-trail`
+
+Returns the audit trail with actors, actions, subjects, and structured event details.
